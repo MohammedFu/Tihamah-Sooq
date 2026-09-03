@@ -26,6 +26,7 @@ The detailed production roadmap and new-chat handoff are maintained in [`IMPLEME
 - `src/data`: Typed fixtures shaped around the documented marketplace models.
 - `src/features`: One feature directory per administrative workflow.
 - `src/services/admin`: Runtime API-to-domain validation and mapping.
+- `src/services/http`: Typed API transport, query serialization, cancellation, and normalized errors.
 - `src/styles`: Project-owned TailAdmin-inspired design system.
 - `src/types/api`: Backend wire contracts using documented `snake_case` fields.
 - `src/types/domain`: Stable dashboard models using `camelCase` fields.

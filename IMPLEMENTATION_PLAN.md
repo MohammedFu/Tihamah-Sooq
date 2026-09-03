@@ -167,7 +167,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T04 - Implement the HTTP client
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T02, T03
 - **Objective:** Provide one reliable transport layer for all admin services.
@@ -175,6 +175,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/services/http/apiClient.ts`, `src/services/http/ApiError.ts`, `src/services/http/query.ts`.
 - **Acceptance:** Components never call raw `fetch`; empty `204` responses work; network errors differ from validation errors; unauthorized responses notify the auth layer.
 - **Verification:** Mock fetch tests for success, timeout, invalid JSON, envelope errors, and unauthorized responses.
+- **Completion note (2026-09-04):** Added a dependency-injected HTTP client with validated base URLs, deterministic query serialization, JSON request bodies, bearer authentication, per-request cancellation/timeouts, unified-envelope validation, raw-response support for presigned operations, and safe handling of empty `204`/`205` responses. Added typed Arabic-ready `ApiError` normalization for API, validation, authorization, conflict, rate-limit, server, malformed-response, network, timeout, abort, and configuration failures. Mock-fetch assertions passed for successful JSON and empty responses, query/header/body behavior, API envelopes, all required HTTP classes, retry metadata, invalid JSON/envelopes, network failures, timeout versus caller abort, authentication notification, and unsafe URL rejection.
 
 ### T05 - Implement Refine and domain data providers
 
