@@ -4,7 +4,7 @@ import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { Toast } from "../../../components/ui/Toast";
-import { initialRegions, type RegionRecord } from "../../../data/adminFixtures";
+import { initialRegions } from "../../../data/adminFixtures";
 
 type Editor = { type: "region" | "village"; regionId?: number; id?: number; name?: string };
 
