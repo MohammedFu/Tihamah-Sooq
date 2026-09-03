@@ -57,6 +57,7 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 4. Access-token lifetime is documented as 15 minutes and refresh-token lifetime as 30 days, but an administrator refresh endpoint is not clearly specified. T07 must not invent a refresh route.
 5. The dashboard requires append-only audit logs, but a complete admin audit-list endpoint is not visible in the current executable contract. T25 and T27 must retain an adapter boundary until this endpoint is confirmed.
 6. Notification targeting by region/village appears in the dashboard requirements, while some API examples contain only `title` and `body`. Confirm audience fields before live targeted broadcasts.
+7. Banner targeting, administrative title, and start/end scheduling are required by the dashboard analysis, but the current Swagger banner model contains only image URL, sort order, and active state. The domain model preserves nullable extension fields while remote mutations remain limited to the confirmed contract.
 
 ## 5. Current Baseline
 
@@ -153,7 +154,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T03 - Generate and normalize API contracts
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T01
 - **Objective:** Represent documented DTOs with strict TypeScript types while isolating backend `snake_case` from UI-friendly domain models.
@@ -162,6 +163,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/types/api/*`, `src/types/domain/*`, `src/services/admin/mappers.ts`.
 - **Acceptance:** Every consumed response is typed; nullable fields match Swagger/models; money is not formatted until the presentation layer; dates remain ISO strings in services.
 - **Verification:** Unit-test representative payloads and malformed/partial responses.
+- **Completion note (2026-09-04):** Added wire-level contracts under `src/types/api`, dashboard domain contracts under `src/types/domain`, and strict runtime mappers in `src/services/admin/mappers.ts`. Mappers validate required fields, IDs, finite non-negative monetary values, known statuses, pagination, and ISO date-times; preserve documented nullability; flatten role permissions; and omit FCM tokens from domain objects. Fixture-independent assertions passed for complete and partial Swagger payloads plus malformed dates, status values, money, pagination, and missing fields. Contract gaps for audit logs and enriched banners remain explicit and nullable rather than fabricated.
 
 ### T04 - Implement the HTTP client
 
