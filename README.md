@@ -35,4 +35,16 @@ npm run dev
 npm run build
 ```
 
+Local development uses fixture mode when no environment file is present. Use [`.env.example`](./.env.example) as the documented configuration reference; never place server secrets in `VITE_*` variables because Vite exposes them to the browser bundle.
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `VITE_API_MODE` | Staging/production | `fixture` for local review or `remote` for the live admin API |
+| `VITE_API_URL` | Remote mode | Absolute HTTP(S) URL or root-relative API base path |
+| `VITE_REQUEST_TIMEOUT_MS` | No | Request timeout from 1,000 to 120,000 ms; defaults to 15,000 |
+| `VITE_MEDIA_HOST` | No | Trusted absolute HTTP(S) origin/base path for public media |
+| `VITE_APP_ENV` | No | `development`, `staging`, `production`, or `test`; defaults from the Vite mode |
+
+Deployed staging and production environments must select an API mode explicitly. Invalid values render an actionable startup configuration screen rather than allowing a partially configured dashboard to run.
+
 The interactions currently update local typed fixtures so each workflow can be reviewed end to end. The next integration step is a Refine data provider for the documented `/api/v1/admin/*` endpoints, plus the admin authentication provider and permission matrix.
