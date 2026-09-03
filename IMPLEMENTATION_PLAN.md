@@ -141,7 +141,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T02 - Add validated environment configuration
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T01
 - **Objective:** Centralize deployment-dependent values and fail clearly when production configuration is incomplete.
@@ -149,6 +149,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/config/env.ts`, `.env.example`, `src/vite-env.d.ts`, `README.md`.
 - **Acceptance:** Development defaults to fixture mode; remote mode requires a valid API URL; malformed values produce an actionable startup error.
 - **Verification:** Unit-test configuration parsing and build once in each supported mode.
+- **Completion note (2026-09-04):** Added a pure typed parser and cached runtime accessor in `src/config/env.ts`, typed Vite variables, `.env.example`, README documentation, and an Arabic startup error screen. Validation covers explicit staging/production modes, remote API requirements, HTTP(S)/root-relative URLs, credential/query/fragment rejection, application environments, and 1,000-120,000 ms timeout bounds. Parser assertions passed for valid and invalid cases, and production builds passed in both fixture and remote modes.
 
 ### T03 - Generate and normalize API contracts
 
