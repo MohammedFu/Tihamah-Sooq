@@ -1,0 +1,58 @@
+import { Ban, Eye, Search, ShieldCheck, Smartphone, Unlock } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Drawer } from "../../../components/ui/Drawer";
+import { Modal } from "../../../components/ui/Modal";
+import { PageHeader } from "../../../components/ui/PageHeader";
+import { StatusBadge } from "../../../components/ui/StatusBadge";
+import { Toast } from "../../../components/ui/Toast";
+import { initialUsers, type UserRecord } from "../../../data/adminFixtures";
+
+export function UsersPage() {
+  const [users, setUsers] = useState(initialUsers);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "active" | "banned">("all");
+  const [selected, setSelected] = useState<UserRecord | null>(null);
+  const [banTarget, setBanTarget] = useState<UserRecord | null>(null);
+  const [banReason, setBanReason] = useState("");
+  const [toast, setToast] = useState("");
+
+  const visible = useMemo(() => users.filter((user) => {
+    const stateMatch = filter === "all" || (filter === "banned" ? user.isBanned : !user.isBanned);
+    return stateMatch && `${user.name} ${user.phone} ${user.village}`.toLowerCase().includes(query.toLowerCase());
+  }), [filter, query, users]);
+
+  function updateUser(id: number, isBanned: boolean, reason?: string) {
+    setUsers((items) => items.map((item) => item.id === id ? { ...item, isBanned, banReason: reason } : item));
+    setSelected((item) => item?.id === id ? { ...item, isBanned, banReason: reason } : item);
+    setToast(isBanned ? "تم حظر الحساب وإنهاء الجلسات النشطة" : "تم إلغاء حظر الحساب");
+    window.setTimeout(() => setToast(""), 2600);
+  }
+
+  function confirmBan() {
+    if (!banTarget || !banReason.trim()) return;
+    updateUser(banTarget.id, true, banReason); setBanTarget(null); setBanReason("");
+  }
+
+  return (
+    <>
+      <PageHeader title="إدارة المستخدمين" description="البحث في حسابات العملاء، مراجعة نشاطهم، وإدارة الحظر وإبطال الجلسات." />
+      <div className="summary-strip"><span><strong>{users.length.toLocaleString("ar-SA")}</strong> حساب مسجل</span><span><strong>{users.filter((user) => !user.isBanned).length}</strong> نشط</span><span><strong>{users.filter((user) => user.isBanned).length}</strong> محظور</span></div>
+      <section className="card data-surface">
+        <div className="filters-row"><label className="field-with-icon"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="بحث بالاسم أو رقم الجوال" /></label><select className="select-control" value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}><option value="all">كل الحسابات</option><option value="active">الحسابات النشطة</option><option value="banned">الحسابات المحظورة</option></select></div>
+        <div className="table-wrap"><table><thead><tr><th>المستخدم</th><th>الموقع</th><th>تاريخ التسجيل</th><th>الإعلانات</th><th>العمولات المسددة</th><th>حالة الحساب</th><th>الإجراء</th></tr></thead><tbody>
+          {visible.map((user) => <tr key={user.id}><td><div className="user-cell"><span>{user.name.slice(0, 1)}</span><div><strong>{user.name}</strong><small dir="ltr">{user.phone}</small></div></div></td><td>{user.village}<small className="block-copy">{user.region}</small></td><td>{user.joinedAt}</td><td className="numeric">{user.listings}</td><td className="numeric">{user.paidCommission.toLocaleString("ar-SA")} ر.س</td><td><StatusBadge value={user.isBanned ? "rejected" : "active"} /></td><td><button className="icon-button table-action" type="button" onClick={() => setSelected(user)} aria-label="عرض المستخدم"><Eye size={17} /></button></td></tr>)}
+        </tbody></table></div>
+      </section>
+
+      <Drawer open={Boolean(selected)} title={selected?.name ?? ""} onClose={() => setSelected(null)}>{selected && <div className="detail-stack">
+        <div className="profile-hero"><span>{selected.name.slice(0, 1)}</span><div><h3>{selected.name}</h3><p dir="ltr">{selected.phone}</p></div><StatusBadge value={selected.isBanned ? "rejected" : "active"} /></div>
+        {selected.banReason && <div className="alert-box danger"><Ban size={18} /><div><strong>سبب الحظر</strong><p>{selected.banReason}</p></div></div>}
+        <dl className="detail-grid"><div><dt>المنطقة</dt><dd>{selected.region}</dd></div><div><dt>القرية</dt><dd>{selected.village}</dd></div><div><dt>تاريخ التسجيل</dt><dd>{selected.joinedAt}</dd></div><div><dt>عدد الإعلانات</dt><dd>{selected.listings}</dd></div><div><dt>العمولات المسددة</dt><dd>{selected.paidCommission.toLocaleString("ar-SA")} ر.س</dd></div><div><dt>الأجهزة النشطة</dt><dd>2</dd></div></dl>
+        <div className="activity-list"><h3>آخر نشاطات الحساب</h3><div><Smartphone size={17} /><span><strong>آخر تسجيل دخول</strong><small>اليوم، 08:35 · Android</small></span></div><div><ShieldCheck size={17} /><span><strong>آخر إعلان</strong><small>منذ 18 دقيقة · قيد المراجعة</small></span></div></div>
+        <div className="decision-actions">{selected.isBanned ? <button className="button success-button" type="button" onClick={() => updateUser(selected.id, false)}><Unlock size={17} />إلغاء الحظر</button> : <button className="button danger-button" type="button" onClick={() => setBanTarget(selected)}><Ban size={17} />حظر المستخدم</button>}</div>
+      </div>}</Drawer>
+      <Modal open={Boolean(banTarget)} title="حظر حساب المستخدم" onClose={() => setBanTarget(null)}><div className="alert-box danger"><Ban size={18} /><p>سيتم إنهاء جميع جلسات المستخدم وإبطال رموز الدخول فورياً.</p></div><label className="form-field"><span>سبب الحظر</span><textarea rows={4} value={banReason} onChange={(event) => setBanReason(event.target.value)} placeholder="اكتب سبباً واضحاً ليُحفظ في سجل التدقيق" /></label><div className="modal-actions"><button className="button secondary" type="button" onClick={() => setBanTarget(null)}>إلغاء</button><button className="button danger-button" type="button" disabled={!banReason.trim()} onClick={confirmBan}>تأكيد الحظر</button></div></Modal>
+      <Toast message={toast} />
+    </>
+  );
+}

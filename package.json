@@ -1,0 +1,28 @@
+{
+  "name": "tihamah-sooq-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@refinedev/core": "^5.0.0",
+    "@refinedev/react-router": "^2.0.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router": "7.18.3",
+    "react-router-dom": "7.18.3"
+  },
+  "devDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.63.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.7.2",
+    "vite": "^6.1.0"
+  }
+}
