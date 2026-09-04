@@ -69,7 +69,7 @@ As of 2026-09-04:
 - Each route has an interactive fixture-backed workflow suitable for UI review.
 - Desktop and 390 px mobile browser sweeps passed with no runtime exceptions or document-level horizontal overflow.
 - `npm run build` passes.
-- Authentication, RBAC, production API integration, automated tests, and deployment automation are not implemented yet.
+- The administrator login flow and its initial automated tests are implemented. Persistent sessions, protected routes, RBAC, broader production API integration, and deployment automation remain.
 - `src/data/adminFixtures.ts` is temporary review data, not a production data layer.
 
 ## 6. Target Source Structure
@@ -179,7 +179,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T05 - Implement Refine and domain data providers
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T03, T04
 - **Objective:** Connect standard resource operations through Refine while retaining explicit services for business actions.
@@ -187,12 +187,13 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/providers/dataProvider.ts`, `src/services/admin/*.ts`, `src/app/providers.tsx`.
 - **Acceptance:** Pagination totals and filters map correctly; mutations invalidate only relevant queries; fixture and remote providers expose the same interface.
 - **Verification:** Provider contract tests plus a fixture-mode browser smoke test.
+- **Completion note (2026-09-04):** Registered an environment-selected Refine data provider and shared `AdminServices` runtime through `AppProviders`. Confirmed CRUD adapters now cover categories, regions, villages, and banners with domain-to-wire payload conversion, runtime response mapping, nested filters, deterministic sorting, total-before-page pagination, cancellation propagation, Refine-compatible validation errors, and resource-scoped mutation behavior. Remote services cover dashboard metrics, user bans, commission verification, report resolution, confirmed all-user broadcasts, and system settings; fixture services expose the same contract with mutable in-memory state and audit records. Live listing moderation and audit retrieval intentionally fail with explicit contract-gap errors until their backend routes are confirmed. Mock transport and fixture contract assertions passed for all CRUD methods and operational services, and a headless Chromium smoke test rendered the fixture dashboard successfully.
 
 ## 9. Phase 2: Authentication And Authorization
 
 ### T06 - Build the administrator login screen
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T02-T04
 - **Objective:** Authenticate administrators using the documented email/phone and password contract.
@@ -201,6 +202,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/auth/pages/LoginPage.tsx`, `src/features/auth/components/*`, `src/features/auth/schemas/*`.
 - **Acceptance:** Invalid credentials remain on the page; fields are not cleared after a network error; authenticated users are redirected away from `/login`.
 - **Verification:** Component tests and one end-to-end success/failure flow.
+- **Completion note (2026-09-04):** Added an Arabic RTL administrator login page with normalized email/phone validation, password visibility control, loading and accessible error states, abortable requests, fixture and remote authentication services, safe return-path handling, and in-memory authenticated redirection without pre-empting T07 session persistence. Fixture credentials match the documented Postman examples and are visible only in fixture mode. Vitest covers validation, request failure value retention, loading behavior, password visibility, and redirect sanitization; Playwright verifies invalid then valid credentials, requested-route restoration, authenticated `/login` redirection, and 390 px overflow containment. Desktop and mobile visual checks passed using a project-local Tihamah market image.
 
 ### T07 - Implement session lifecycle
 
@@ -485,7 +487,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T31 - Add unit testing infrastructure
 
-- **Status:** TODO
+- **Status:** PARTIAL
 - **Priority:** P0
 - **Depends on:** T02-T05
 - **Objective:** Cover pure logic and contracts quickly.
@@ -493,10 +495,11 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `vitest.config.ts`, `src/test/setup.ts`, colocated `*.test.ts` files.
 - **Acceptance:** Tests are deterministic, avoid production network calls, and cover critical branches rather than chasing a superficial percentage.
 - **Verification:** Add `npm run test` and `npm run test:coverage` scripts and run both.
+- **Progress note (2026-09-04):** T06 introduced Vitest, jsdom, shared DOM setup, and the `npm test` script for focused authentication tests. Coverage configuration, fixture builders, service-wide tests, and `npm run test:coverage` remain in T31.
 
 ### T32 - Add component tests
 
-- **Status:** TODO
+- **Status:** PARTIAL
 - **Priority:** P1
 - **Depends on:** T13-T16, T31
 - **Objective:** Verify shared controls and high-risk feature interactions from the user’s perspective.
@@ -504,10 +507,11 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** Colocated `*.test.tsx` files and test render helpers.
 - **Acceptance:** Tests query accessible names instead of implementation classes; focus restoration and keyboard interaction are covered.
 - **Verification:** Run component suite in CI-compatible headless mode.
+- **Progress note (2026-09-04):** Login form validation, request failure, field retention, password visibility, and loading behavior are covered through accessible queries. Shared controls and remaining feature interactions are still pending.
 
 ### T33 - Add end-to-end workflow tests
 
-- **Status:** TODO
+- **Status:** PARTIAL
 - **Priority:** P0
 - **Depends on:** T06-T30, T31
 - **Objective:** Protect the nine administrator journeys across routing, providers, and mutation feedback.
@@ -515,6 +519,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `playwright.config.ts`, `e2e/*.spec.ts`, mock API support.
 - **Acceptance:** Critical tests run independently and produce traces/screenshots only on failure; no test depends on external image hosts.
 - **Verification:** Add and run `npm run test:e2e`.
+- **Progress note (2026-09-04):** Added Playwright configuration, fixture-mode server startup, and the T06 invalid/valid login journey with requested-route restoration. Logout, expiry, permissions, and the remaining administrator workflows stay in T33.
 
 ### T34 - Add responsive visual verification
 

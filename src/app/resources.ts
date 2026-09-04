@@ -5,6 +5,8 @@ export const adminResources = [
   { name: "commissions", list: "/commissions", meta: { label: "تدقيق العمولات" } },
   { name: "reports", list: "/reports", meta: { label: "البلاغات والاحتيال" } },
   { name: "locations", list: "/locations", meta: { label: "المناطق والقرى" } },
+  { name: "regions", meta: { label: "المناطق", hide: true } },
+  { name: "villages", meta: { label: "القرى", hide: true } },
   { name: "categories", list: "/categories", meta: { label: "الأقسام" } },
   { name: "banners", list: "/banners", meta: { label: "البنرات" } },
   { name: "system", list: "/system", meta: { label: "الإشعارات والسجل" } },

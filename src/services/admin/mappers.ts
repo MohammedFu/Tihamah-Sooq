@@ -146,6 +146,13 @@ export function mapSuccessResponse<T>(value: unknown, itemMapper: Mapper<T>, pat
   } as const;
 }
 
+export function mapActionResponse(value: unknown, path = "response") {
+  const record = successRecordAt(value, path);
+  return {
+    message: optional(record, "message", path, stringAt),
+  } as const;
+}
+
 export function mapListResponse<T>(value: unknown, itemMapper: Mapper<T>, path = "response"): readonly T[] {
   const record = successRecordAt(value, path);
   return required(record, "data", path, (data, dataPath) => arrayAt(data, dataPath, itemMapper));
