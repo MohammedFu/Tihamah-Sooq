@@ -10,4 +10,7 @@ export const adminResources = [
   { name: "categories", list: "/categories", meta: { label: "الأقسام" } },
   { name: "banners", list: "/banners", meta: { label: "البنرات" } },
   { name: "system", list: "/system", meta: { label: "الإشعارات والسجل" } },
+  { name: "notifications", meta: { label: "الإشعارات", parent: "system", hide: true } },
+  { name: "settings", meta: { label: "الإعدادات", parent: "system", hide: true } },
+  { name: "audit", meta: { label: "سجل التدقيق", parent: "system", hide: true } },
 ];

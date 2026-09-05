@@ -30,6 +30,7 @@ for (const width of [390, 1440]) {
     });
     expect(result).toMatchObject({ before: 5, after: 5, updated: { name: "قسم معدل", isActive: false }, filtered: 1, banned: 2 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    await page.getByRole("button", { name: /^حساب الإدارة:/ }).click();
     await page.getByRole("button", { name: "تسجيل الخروج" }).click();
     await expect(page).toHaveURL(/\/login$/);
     const unauthorized = await page.evaluate(async () => {

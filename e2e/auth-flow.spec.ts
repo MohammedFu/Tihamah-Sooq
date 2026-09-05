@@ -30,6 +30,7 @@ test("enforces the complete administrator authentication-first flow", async ({ p
 
   await page.goto("/login");
   await expect(page).toHaveURL(/\/$/);
+  await page.getByRole("button", { name: /^حساب الإدارة:/ }).click();
   await page.getByRole("button", { name: "تسجيل الخروج" }).click();
   await expect(page).toHaveURL(/\/login$/);
   expect(await page.evaluate((key) => sessionStorage.getItem(key), sessionKey)).toBeNull();

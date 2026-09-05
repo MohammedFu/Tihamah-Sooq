@@ -40,3 +40,15 @@ export type AdminSession = Readonly<{
   admin: AdminIdentity;
   tokens: AuthTokens;
 }>;
+
+// Display-only projection for Refine's identity cache. Authorization continues to
+// use the session's permissions, never a displayed role name.
+export type AdminAccountIdentity = Readonly<{
+  id: EntityId;
+  name: string;
+  roleName: string;
+  initials: string;
+  email: string | null;
+  phone: string | null;
+  sessionExpiresAt: IsoDateString | null;
+}>;

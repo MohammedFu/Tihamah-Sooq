@@ -1,7 +1,11 @@
+import { usePermissions } from "@refinedev/core";
 import { ArrowLeft, CircleDollarSign, Flag, MessageSquareText, PackageCheck, ShoppingBag, Users } from "lucide-react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
+import { canAccessWithPermissions } from "../../../providers/accessControlProvider";
+import type { Permission } from "../../../types/domain";
 
 const metrics = [
   { label: "إجمالي المستخدمين", value: "8,420", change: "+142 هذا الأسبوع", icon: Users, tone: "blue" },
@@ -43,7 +47,7 @@ export function OverviewPage() {
 
       <div className="overview-grid overview-bottom">
         <section className="card table-card" style={{ marginTop: 0 }}>
-          <div className="table-toolbar"><div><h2>آخر عناصر المراجعة</h2><p className="panel-copy">العمليات التي تحتاج قراراً إدارياً.</p></div><Link className="text-link" to="/listings">عرض الكل <ArrowLeft size={15} /></Link></div>
+          <div className="table-toolbar"><div><h2>آخر عناصر المراجعة</h2><p className="panel-copy">العمليات التي تحتاج قراراً إدارياً.</p></div><PermissionLink className="text-link" to="/listings" resource="listings">عرض الكل <ArrowLeft size={15} /></PermissionLink></div>
           <div className="table-wrap"><table><thead><tr><th>النوع</th><th>السجل</th><th>صاحب الطلب</th><th>الوقت</th><th>الحالة</th></tr></thead><tbody>
             <tr><td>إعلان</td><td>#1048 - مجموعة أغنام حري</td><td>فواز أبو عبدل</td><td>منذ 18 دقيقة</td><td><StatusBadge value="pending_review" /></td></tr>
             <tr><td>عمولة</td><td>#511 - لاندكروزر 2012</td><td>عبدالله الغامدي</td><td>منذ 42 دقيقة</td><td><StatusBadge value="paid" /></td></tr>
@@ -53,9 +57,9 @@ export function OverviewPage() {
         <section className="card panel">
           <h2>طوابير العمل</h2><p className="panel-copy">الأولوية حسب أثرها على المستخدمين.</p>
           <div className="queue">
-            <QueueItem label="إعلانات بانتظار المراجعة" value="12" tone="red" path="/listings" />
-            <QueueItem label="إيصالات بانتظار التدقيق" value="8" tone="amber" path="/commissions" />
-            <QueueItem label="بلاغات مفتوحة" value="6" tone="blue" path="/reports" />
+            <QueueItem label="إعلانات بانتظار المراجعة" value="12" tone="red" path="/listings" resource="listings" />
+            <QueueItem label="إيصالات بانتظار التدقيق" value="8" tone="amber" path="/commissions" resource="commissions" />
+            <QueueItem label="بلاغات مفتوحة" value="6" tone="blue" path="/reports" resource="reports" />
           </div>
         </section>
       </div>
@@ -63,6 +67,12 @@ export function OverviewPage() {
   );
 }
 
-function QueueItem({ label, value, tone, path }: { label: string; value: string; tone: string; path: string }) {
-  return <Link className="queue-link" to={path}><span><i className={`dot ${tone}`} />{label}</span><strong>{value}</strong></Link>;
+function QueueItem({ label, value, tone, path, resource }: { label: string; value: string; tone: string; path: string; resource: string }) {
+  return <PermissionLink className="queue-link" to={path} resource={resource}><span><i className={`dot ${tone}`} />{label}</span><strong>{value}</strong></PermissionLink>;
+}
+
+function PermissionLink({ resource, to, className, children }: { resource: string; to: string; className: string; children: ReactNode }) {
+  const permissions = usePermissions<readonly Permission[]>({});
+  if (!permissions.isSuccess || !canAccessWithPermissions(permissions.data, resource, "list")) return null;
+  return <Link className={className} to={to}>{children}</Link>;
 }
