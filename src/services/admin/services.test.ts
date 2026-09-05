@@ -1,0 +1,108 @@
+import { describe, expect, it, vi } from "vitest";
+import { ApiClient, ApiError } from "../http";
+import { createAdminServices } from "./services";
+import { createFixtureAdminServices } from "./fixtureServices";
+import { createAdminFixtureData } from "./fixtureData";
+
+function setup() {
+  const fetcher = vi.fn<typeof fetch>().mockImplementation(async () => Response.json({ success: true, message: "confirmed" }));
+  const services = createAdminServices(new ApiClient({ baseUrl: "/api/v1", timeoutMs: 1000, fetcher }));
+  return { fetcher, services };
+}
+
+describe("explicit admin operations", () => {
+  it("maps ban/unban and report resolution to PATCH action acknowledgements", async () => {
+    const { fetcher, services } = setup();
+    expect(await services.users.ban(201, { isBanned: true, reason: " تكرار المخالفات " })).toEqual({ message: "confirmed" });
+    expect(await services.users.ban(201, { isBanned: false })).toEqual({ message: "confirmed" });
+    await services.reports.resolve(801, " تمت مراجعة الأدلة ");
+    expect(fetcher.mock.calls.map(([url, init]) => ({ url, method: init?.method, body: JSON.parse(String(init?.body)) }))).toEqual([
+      { url: "/api/v1/admin/users/201/ban", method: "PATCH", body: { is_banned: true, ban_reason: "تكرار المخالفات" } },
+      { url: "/api/v1/admin/users/201/ban", method: "PATCH", body: { is_banned: false, ban_reason: "" } },
+      { url: "/api/v1/admin/reports/801/resolve", method: "PATCH", body: { status: "resolved", resolution_notes: "تمت مراجعة الأدلة" } },
+    ]);
+  });
+
+  it("verifies commissions only with the payload confirmed by the detailed guide", async () => {
+    const { fetcher, services } = setup();
+    fetcher.mockResolvedValueOnce(Response.json({ success: true, data: { ...createAdminFixtureData().commissions[0], status: "verified", verified_by_id: 7 } }));
+    const result = await services.commissions.verify(511, { status: "verified" });
+    expect(result).toMatchObject({ id: 511, status: "verified", verifiedById: 7, amount: 150 });
+    expect(fetcher.mock.calls[0][0]).toBe("/api/v1/admin/commissions/511/verify");
+    expect(fetcher.mock.calls[0][1]?.method).toBe("PATCH");
+    expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ status: "verified" });
+    await expect(services.commissions.verify(511, { status: "rejected", notes: "إيصال غير مطابق" })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
+    await expect(services.commissions.verify(511, { status: "verified", notes: "ملاحظات" })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps missing contracts closed and requires reasons before network activity", async () => {
+    const { fetcher, services } = setup();
+    await expect(services.listings.list()).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
+    await expect(services.listings.moderate(1, { status: "removed", reason: "مخالفة" })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
+    await expect(services.audit.list()).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
+    await expect(services.broadcasts.send({ title: "تنبيه", body: "نص", audience: "region", targetId: 1 })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
+    await expect(services.users.ban(201, { isBanned: true, reason: " " })).rejects.toMatchObject({ kind: "validation" });
+    await expect(services.reports.resolve(801, " ")).rejects.toMatchObject({ kind: "validation" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("sends only confirmed broadcast and settings bodies, including action-shaped setting responses", async () => {
+    const { fetcher, services } = setup();
+    await services.broadcasts.send({ title: "تنبيه", body: "نص الرسالة", audience: "all" });
+    fetcher.mockResolvedValueOnce(Response.json({ success: true, key: "commission_percentage", value: "1.0", message: "updated" }));
+    expect(await services.settings.update("commission_percentage", { value: " 1.0 ", description: "العمولة" })).toEqual({ message: "updated" });
+    await services.settings.updateBatch({ commission_percentage: "1.0" });
+    await services.settings.setOtpEnabled(false);
+    expect(fetcher.mock.calls.map(([url, init]) => ({ url, method: init?.method, body: JSON.parse(String(init?.body)) }))).toEqual([
+      { url: "/api/v1/admin/notifications/broadcast", method: "POST", body: { title: "تنبيه", body: "نص الرسالة" } },
+      { url: "/api/v1/admin/settings/commission_percentage", method: "PUT", body: { value: " 1.0 ", description: "العمولة" } },
+      { url: "/api/v1/admin/settings", method: "PUT", body: { settings: { commission_percentage: "1.0" } } },
+      { url: "/api/v1/admin/settings/otp", method: "PATCH", body: { is_otp_enabled: false } },
+    ]);
+    await expect(services.settings.update("../users/1", { value: "x" })).rejects.toBeInstanceOf(ApiError);
+    await expect(services.settings.update("sms", { value: "x" })).rejects.toBeInstanceOf(ApiError);
+    expect(fetcher).toHaveBeenCalledTimes(4);
+  });
+
+  it("reflects fixture decisions in later reads while keeping audit records immutable and instances isolated", async () => {
+    const services = createFixtureAdminServices();
+    await services.users.ban(201, { isBanned: true, reason: "سبب الحظر" });
+    expect((await services.users.list({ filters: [{ field: "isBanned", operator: "eq", value: true }] })).pagination.totalItems).toBe(2);
+    await services.users.ban(201, { isBanned: false });
+    expect((await services.users.list({ filters: [{ field: "isBanned", operator: "eq", value: false }] })).items[0].banReason).toBe("");
+    await services.reports.resolve(801, "تمت المعالجة");
+    expect((await services.reports.list({ filters: [{ field: "status", operator: "eq", value: "open" }] })).items).toEqual([]);
+    await expect(services.reports.resolve(801, "مرة أخرى")).rejects.toMatchObject({ kind: "conflict" });
+    await services.commissions.verify(511, { status: "rejected", notes: "إيصال غير مطابق" });
+    expect((await services.commissions.list()).items[0].status).toBe("rejected");
+    await expect(services.commissions.verify(511, { status: "verified" })).rejects.toMatchObject({ kind: "conflict" });
+    const audit = await services.audit.list();
+    await services.listings.moderate(1048, { status: "active" });
+    expect((await services.statistics.get()).activeListings).toBe(1);
+    await services.listings.moderate(1048, { status: "removed", reason: "مخالفة" });
+    expect((await services.listings.list()).items).toEqual([]);
+    expect(await services.audit.list()).toEqual(audit);
+    expect((await createFixtureAdminServices().commissions.list()).items[0].status).toBe("paid");
+  });
+
+  it("updates fixture settings and maps metrics with nullable optional counters", async () => {
+    const services = createFixtureAdminServices();
+    await services.settings.update("commission_percentage", { value: "2.0" });
+    await services.settings.updateBatch({ minimum_commission: "5" });
+    await services.settings.setOtpEnabled(true);
+    const settings = await services.settings.list();
+    expect(settings.find((row) => row.key === "commission_percentage")?.value).toBe("2.0");
+    expect(settings.find((row) => row.key === "minimum_commission")?.value).toBe("5");
+    expect(settings.find((row) => row.key === "is_otp_enabled")?.value).toBe("true");
+    expect(await services.statistics.get()).toMatchObject({ totalUsers: 2, newUsersToday: null, pendingReviewListings: 1, totalCommissions: 150 });
+  });
+
+  it("applies the session guard to reads, writes and local review adapters", async () => {
+    const denied = () => { throw new ApiError({ kind: "unauthorized", code: "UNAUTHORIZED", status: 401, userMessage: "انتهت الجلسة" }); };
+    const services = createFixtureAdminServices({ assertAuthenticated: denied });
+    await expect(services.categories.list()).rejects.toMatchObject({ status: 401 });
+    await expect(services.users.ban(201, { isBanned: true, reason: "سبب" })).rejects.toMatchObject({ status: 401 });
+    await expect(services.audit.list()).rejects.toMatchObject({ status: 401 });
+  });
+});

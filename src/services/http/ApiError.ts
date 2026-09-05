@@ -28,6 +28,8 @@ export type ApiErrorOptions = Readonly<{
 }>;
 
 export class ApiError extends Error {
+  // Refine reads statusCode; services retain the transport's status field.
+  get statusCode(): number { return this.status ?? 0; }
   readonly kind: ApiErrorKind;
   readonly code: string;
   readonly userMessage: string;
