@@ -26,7 +26,8 @@ The detailed production roadmap and new-chat handoff are maintained in [`IMPLEME
 - `src/components/ui`: Shared drawers, modals, badges, headers, and toasts.
 - `src/data`: Typed fixtures shaped around the documented marketplace models.
 - `src/features`: One feature directory per administrative workflow.
-- `src/services/admin`: Runtime API-to-domain validation and mapping.
+- `src/providers`: Refine authentication/data providers and scoped action invalidation.
+- `src/services/admin`: Typed fixture/remote services, request validation and API-to-domain mapping.
 - `src/services/http`: Typed API transport, query serialization, cancellation, and normalized errors.
 - `src/styles`: Project-owned TailAdmin-inspired design system.
 - `src/test`: Shared test setup and deterministic fixture builders.
@@ -44,14 +45,14 @@ npm run test:e2e
 npm run build
 ```
 
-`npm test` runs the unit and component suite in jsdom. `npm run test:e2e` runs the fixture-mode authentication workflow in Microsoft Edge and starts or reuses the local Vite server on port `4173`.
+`npm test` runs the unit, component and provider contract suite in jsdom. `npm run test:e2e` runs fixture-mode authentication and data-provider smoke checks at mobile/desktop widths in Microsoft Edge and starts or reuses the local Vite server on port `4173`.
 
 Local development uses fixture mode when no environment file is present. Use [`.env.example`](./.env.example) as the documented configuration reference; never place server secrets in `VITE_*` variables because Vite exposes them to the browser bundle.
 
 | Variable | Required | Description |
 | --- | --- | --- |
 | `VITE_API_MODE` | Staging/production | `fixture` for local review or `remote` for the live admin API |
-| `VITE_API_URL` | Remote mode | Absolute HTTP(S) URL or root-relative API base path |
+| `VITE_API_URL` | Remote mode | Absolute HTTP(S) URL or root-relative API base path ending in `/api/v1` |
 | `VITE_REQUEST_TIMEOUT_MS` | No | Request timeout from 1,000 to 120,000 ms; defaults to 15,000 |
 | `VITE_MEDIA_HOST` | No | Trusted absolute HTTP(S) origin/base path for public media |
 | `VITE_APP_ENV` | No | `development`, `staging`, `production`, or `test`; defaults from the Vite mode |
@@ -70,4 +71,4 @@ Fixture mode accepts either documented identifier with the development-only pass
 | Phone | `+966500000000` |
 | Password | `Admin@123456` |
 
-The interactions currently update local typed fixtures so each workflow can be reviewed end to end. The next integration steps are the Refine data provider for the documented `/api/v1/admin/*` endpoints and the administrator permission matrix.
+The operational pages currently update local typed fixtures for workflow review. A registered Refine data provider and explicit admin services now support fixture/remote modes for confirmed contracts. Page integration remains in T17–T25; the next dependency-safe task is dynamic administrator identity (T09). See [the administrative data contract and usage guide](./docs/ADMIN_DATA.md) for supported queries, mutation inputs, cache behavior and blocked contracts.

@@ -58,6 +58,10 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 5. The dashboard requires append-only audit logs, but a complete admin audit-list endpoint is not visible in the current executable contract. T25 and T27 must retain an adapter boundary until this endpoint is confirmed.
 6. Notification targeting by region/village appears in the dashboard requirements, while some API examples contain only `title` and `body`. Confirm audience fields before live targeted broadcasts.
 7. Banner targeting, administrative title, and start/end scheduling are required by the dashboard analysis, but the current Swagger banner model contains only image URL, sort order, and active state. The domain model preserves nullable extension fields while remote mutations remain limited to the confirmed contract.
+8. T05 confirmed that category/region/village/banner collections are unpaginated and expose no GET-by-ID operation. The provider derives detail reads, filters, sorting, and pagination from complete collections; only the documented village `region_id` filter is sent remotely. Do not invent detail or server-sort routes in T22–T24.
+9. T05 found that Swagger references `dto.VerifyCommissionRequest` without defining it and Postman supplies `{}`. The detailed API guide confirms `{ "status": "verified" }` only. Remote verification therefore permits that payload; rejection and notes remain in local-review mode pending T20 contract confirmation. The shared request type retains them for fixture use.
+10. The executable user-list contract supports `q` and `is_banned`; commission/report lists support `status`, and all three support `page`/`limit`. User geographic filters, report-type filters, and server sorting are not confirmed. T19–T21 must confirm them before enabling remote controls.
+11. Swagger references an absent `dto.TestSMSRequest` and Postman supplies `{}`. T25 must confirm the SMS test body. T05 implements settings list/single/batch/OTP operations; SMS gateway UI integration remains in T25.
 
 ## 5. Current Baseline
 
@@ -71,6 +75,8 @@ As of 2026-09-05:
 - `npm run build` passes.
 - Administrator login, session-scoped persistence, expiry validation, logout, and protected route flow are implemented and covered by focused Vitest and Playwright tests. RBAC, broader production API integration, broader automated coverage, and deployment automation remain.
 - `src/data/adminFixtures.ts` is temporary review data, not a production data layer.
+- T05 registers a session-guarded Refine data provider and typed fixture/remote admin services. Catalog CRUD and confirmed operational services are available; the existing pages still require their T17–T25 integrations. Provider fixtures use a separate isolated in-memory store. Contracts and cache usage are documented in `docs/ADMIN_DATA.md`.
+- Verification now includes 49 passing unit/component/provider tests and three passing Playwright workflows, including provider smoke checks at 390/1440 px. Fixture and remote production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
 
 ## 6. Target Source Structure
 
@@ -179,7 +185,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T05 - Implement Refine and domain data providers
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T03, T04
 - **Objective:** Connect standard resource operations through Refine while retaining explicit services for business actions.
@@ -187,6 +193,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/providers/dataProvider.ts`, `src/services/admin/*.ts`, `src/app/providers.tsx`.
 - **Acceptance:** Pagination totals and filters map correctly; mutations invalidate only relevant queries; fixture and remote providers expose the same interface.
 - **Verification:** Provider contract tests plus a fixture-mode browser smoke test.
+- **Completion note (2026-09-05):** Registered `src/providers/dataProvider.ts` through `src/app/providers.tsx` with session guards, catalog CRUD, list-based detail/many reads, strict camelCase-to-snake_case request validation, filtered catalog totals, and confirmed server pagination for users/commissions/reports. Added explicit statistics, moderation, ban/unban, commission, report, broadcast, settings, and audit service interfaces with isolated fixture state and fail-closed remote contract gaps. Standard Refine mutations retain resource-specific invalidation; `useAdminAction` refreshes only related resources after confirmed domain/hierarchy actions. Added request/parity/error/empty/cancellation/conflict tests, a real Refine invalidation integration test, and browser smoke checks at 390/1440 px. `npm run lint`, all 49 tests, all three Playwright workflows, and fixture/remote builds passed. One existing login test timed out while heavy checks ran concurrently; the complete isolated test rerun passed without changing its timeout. Vite reports a non-blocking chunk-size advisory. Updated README and `docs/ADMIN_DATA.md`; operational page migrations and RBAC remain in their own tasks.
 
 ## 9. Phase 2: Authentication And Authorization
 

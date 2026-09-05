@@ -151,6 +151,13 @@ export function mapListResponse<T>(value: unknown, itemMapper: Mapper<T>, path =
   return required(record, "data", path, (data, dataPath) => arrayAt(data, dataPath, itemMapper));
 }
 
+export function mapActionResponse(value: unknown) {
+  // The transport returns undefined only for a successful 204/205 response.
+  if (value === undefined) return { message: null };
+  const record = successRecordAt(value, "response");
+  return { message: optional(record, "message", "response", stringAt) };
+}
+
 export function mapPagination(value: unknown, path = "pagination"): Pagination {
   const record = recordAt(value, path);
   return {

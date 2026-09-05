@@ -17,6 +17,8 @@ export type ApiCommission = Readonly<{
   updated_at?: string;
 }>;
 
+// The detailed guide confirms only status: "verified". Rejection/notes remain
+// local-review extensions until the absent Swagger DTO is supplied (T05/T20).
 export type ApiVerifyCommissionRequest = Readonly<{
   status: "verified" | "rejected";
   notes?: string;
