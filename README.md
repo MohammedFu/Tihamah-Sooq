@@ -8,6 +8,7 @@ The detailed production roadmap and new-chat handoff are maintained in [`IMPLEME
 
 | Route | Workflow |
 | --- | --- |
+| `/login` | Administrator authentication by email or phone with safe return-path handling |
 | `/` | Marketplace KPIs, moderation queues, listing growth, and OTP quota |
 | `/listings` | Listing review, approval, rejection, deactivation, and deletion |
 | `/users` | User search, activity history, banning, and session revocation |
@@ -25,7 +26,10 @@ The detailed production roadmap and new-chat handoff are maintained in [`IMPLEME
 - `src/components/ui`: Shared drawers, modals, badges, headers, and toasts.
 - `src/data`: Typed fixtures shaped around the documented marketplace models.
 - `src/features`: One feature directory per administrative workflow.
-- `src/services/admin`: Runtime API-to-domain validation and mapping.
+- `src/test`: Shared setup for component and unit tests.
+- `e2e`: Browser workflows executed with Playwright.
+- `src/providers`: Refine CRUD providers for fixture and remote API modes.
+- `src/services/admin`: API-to-domain mapping and typed operational services for both runtime modes.
 - `src/services/http`: Typed API transport, query serialization, cancellation, and normalized errors.
 - `src/styles`: Project-owned TailAdmin-inspired design system.
 - `src/types/api`: Backend wire contracts using documented `snake_case` fields.
@@ -36,6 +40,8 @@ The detailed production roadmap and new-chat handoff are maintained in [`IMPLEME
 ```bash
 npm install
 npm run dev
+npm test
+npm run test:e2e
 npm run build
 ```
 
@@ -51,4 +57,16 @@ Local development uses fixture mode when no environment file is present. Use [`.
 
 Deployed staging and production environments must select an API mode explicitly. Invalid values render an actionable startup configuration screen rather than allowing a partially configured dashboard to run.
 
-The interactions currently update local typed fixtures so each workflow can be reviewed end to end. The next integration step is a Refine data provider for the documented `/api/v1/admin/*` endpoints, plus the admin authentication provider and permission matrix.
+### Fixture administrator login
+
+Local fixture mode accepts either documented identifier with the development-only password:
+
+| Field | Value |
+| --- | --- |
+| Email | `admin@tihamah.com` |
+| Phone | `+966500000000` |
+| Password | `Admin@123456` |
+
+Remote mode submits the normalized credentials to `POST /api/v1/admin/auth/login`. T06 keeps an accepted session in memory so the login flow can redirect safely; persistent session storage, logout/expiry behavior, and protected dashboard routes remain intentionally assigned to T07 and T08.
+
+The current screen components still use local presentation fixtures until their feature-specific migration tasks. The underlying Refine CRUD provider and typed operational services support fixture and remote modes; session lifecycle and route protection are the next authentication layers.

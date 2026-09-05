@@ -9,10 +9,12 @@ import { LocationsPage } from "../features/locations/pages/LocationsPage";
 import { ReportsPage } from "../features/reports/pages/ReportsPage";
 import { SystemPage } from "../features/system/pages/SystemPage";
 import { UsersPage } from "../features/users/pages/UsersPage";
+import { LoginPage } from "../features/auth/pages/LoginPage";
 
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/login" element={<LoginPage />} />
       <Route element={<DashboardLayout />}>
         <Route index element={<OverviewPage />} />
         <Route path="/listings" element={<ListingsPage />} />
