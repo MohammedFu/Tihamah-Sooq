@@ -1,0 +1,58 @@
+import type { AuthProvider } from "@refinedev/core";
+import type { ApiError } from "../services/http";
+import { isApiError } from "../services/http";
+import type { AdminAuthService } from "../features/auth/api/authService";
+import type { AdminLoginCredentials } from "../features/auth/schemas/loginSchema";
+import { safeDashboardRedirect } from "../features/auth/schemas/safeRedirect";
+import type { AdminSessionRepository } from "../features/auth/session";
+
+export type AdminLoginParameters = AdminLoginCredentials & Readonly<{
+  redirectTo?: string;
+  signal?: AbortSignal;
+}>;
+
+function isUnauthorized(error: unknown): error is ApiError {
+  return isApiError(error) && error.kind === "unauthorized";
+}
+
+export function createAdminAuthProvider(
+  service: AdminAuthService,
+  sessions: AdminSessionRepository,
+): AuthProvider {
+  return {
+    async login(parameters: AdminLoginParameters) {
+      try {
+        const session = await service.login(parameters, parameters.signal);
+        sessions.save(session);
+        return { success: true, redirectTo: safeDashboardRedirect(parameters.redirectTo) };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error : new Error("تعذر تسجيل الدخول."),
+        };
+      }
+    },
+    async logout() {
+      sessions.clear();
+      return { success: true, redirectTo: "/login" };
+    },
+    async check() {
+      const session = sessions.load();
+      if (session) return { authenticated: true };
+      return { authenticated: false, redirectTo: "/login", logout: true };
+    },
+    async onError(error) {
+      if (isUnauthorized(error)) {
+        sessions.clear();
+        return { logout: true, redirectTo: "/login", error };
+      }
+      return { error: error instanceof Error ? error : undefined };
+    },
+    async getIdentity() {
+      return sessions.load()?.admin ?? null;
+    },
+    async getPermissions() {
+      return sessions.load()?.admin.permissions ?? [];
+    },
+  };
+}

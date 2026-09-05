@@ -1,5 +1,7 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Authenticated } from "@refinedev/core";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { DashboardLayout } from "../components/layout/DashboardLayout";
+import { AuthCheckingScreen, LoginPage } from "../features/auth";
 import { BannersPage } from "../features/banners/pages/BannersPage";
 import { CategoriesPage } from "../features/categories/pages/CategoriesPage";
 import { CommissionsPage } from "../features/commissions/pages/CommissionsPage";
@@ -13,7 +15,12 @@ import { UsersPage } from "../features/users/pages/UsersPage";
 export function AppRoutes() {
   return (
     <Routes>
-      <Route element={<DashboardLayout />}>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={
+        <Authenticated key="dashboard-routes" fallback={<LoginRedirect />} loading={<AuthCheckingScreen />}>
+          <DashboardLayout />
+        </Authenticated>
+      }>
         <Route index element={<OverviewPage />} />
         <Route path="/listings" element={<ListingsPage />} />
         <Route path="/users" element={<UsersPage />} />
@@ -27,4 +34,10 @@ export function AppRoutes() {
       </Route>
     </Routes>
   );
+}
+
+function LoginRedirect() {
+  const location = useLocation();
+  const from = { pathname: location.pathname, search: location.search, hash: location.hash };
+  return <Navigate replace state={{ from }} to="/login" />;
 }
