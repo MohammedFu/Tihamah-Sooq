@@ -8,6 +8,7 @@ The detailed production roadmap and new-chat handoff are maintained in [`IMPLEME
 
 | Route | Workflow |
 | --- | --- |
+| `/login` | Administrator sign-in and safe restoration of the requested dashboard route |
 | `/` | Marketplace KPIs, moderation queues, listing growth, and OTP quota |
 | `/listings` | Listing review, approval, rejection, deactivation, and deletion |
 | `/users` | User search, activity history, banning, and session revocation |
@@ -28,16 +29,22 @@ The detailed production roadmap and new-chat handoff are maintained in [`IMPLEME
 - `src/services/admin`: Runtime API-to-domain validation and mapping.
 - `src/services/http`: Typed API transport, query serialization, cancellation, and normalized errors.
 - `src/styles`: Project-owned TailAdmin-inspired design system.
+- `src/test`: Shared test setup and deterministic fixture builders.
 - `src/types/api`: Backend wire contracts using documented `snake_case` fields.
 - `src/types/domain`: Stable dashboard models using `camelCase` fields.
+- `e2e`: Playwright browser workflows.
 
 ## Development
 
 ```bash
 npm install
 npm run dev
+npm test
+npm run test:e2e
 npm run build
 ```
+
+`npm test` runs the unit and component suite in jsdom. `npm run test:e2e` runs the fixture-mode authentication workflow in Microsoft Edge and starts or reuses the local Vite server on port `4173`.
 
 Local development uses fixture mode when no environment file is present. Use [`.env.example`](./.env.example) as the documented configuration reference; never place server secrets in `VITE_*` variables because Vite exposes them to the browser bundle.
 
@@ -51,4 +58,16 @@ Local development uses fixture mode when no environment file is present. Use [`.
 
 Deployed staging and production environments must select an API mode explicitly. Invalid values render an actionable startup configuration screen rather than allowing a partially configured dashboard to run.
 
-The interactions currently update local typed fixtures so each workflow can be reviewed end to end. The next integration step is a Refine data provider for the documented `/api/v1/admin/*` endpoints, plus the admin authentication provider and permission matrix.
+### Authentication flow
+
+Every dashboard route is protected. Anonymous visitors are sent to `/login`, and a successful login restores the originally requested route. The session is stored in browser `sessionStorage`, expires according to the server-provided lifetime, and is removed on logout or when malformed, expired, or assigned to an inactive administrator. No refresh request is attempted because the current administrator API does not document a refresh endpoint.
+
+Fixture mode accepts either documented identifier with the development-only password:
+
+| Field | Value |
+| --- | --- |
+| Email | `admin@tihamah.com` |
+| Phone | `+966500000000` |
+| Password | `Admin@123456` |
+
+The interactions currently update local typed fixtures so each workflow can be reviewed end to end. The next integration steps are the Refine data provider for the documented `/api/v1/admin/*` endpoints and the administrator permission matrix.

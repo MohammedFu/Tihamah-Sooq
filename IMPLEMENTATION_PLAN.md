@@ -61,7 +61,7 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 
 ## 5. Current Baseline
 
-As of 2026-09-04:
+As of 2026-09-05:
 
 - The React/TypeScript/Vite/Refine project exists independently in `D:\dashboard\Tihamah-Sooq`.
 - The application has an Arabic RTL responsive shell, sidebar, header, badges, drawers, modals, toasts, and shared styling.
@@ -69,7 +69,7 @@ As of 2026-09-04:
 - Each route has an interactive fixture-backed workflow suitable for UI review.
 - Desktop and 390 px mobile browser sweeps passed with no runtime exceptions or document-level horizontal overflow.
 - `npm run build` passes.
-- Authentication, RBAC, production API integration, automated tests, and deployment automation are not implemented yet.
+- Administrator login, session-scoped persistence, expiry validation, logout, and protected route flow are implemented and covered by focused Vitest and Playwright tests. RBAC, broader production API integration, broader automated coverage, and deployment automation remain.
 - `src/data/adminFixtures.ts` is temporary review data, not a production data layer.
 
 ## 6. Target Source Structure
@@ -192,7 +192,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T06 - Build the administrator login screen
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T02-T04
 - **Objective:** Authenticate administrators using the documented email/phone and password contract.
@@ -201,10 +201,11 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/auth/pages/LoginPage.tsx`, `src/features/auth/components/*`, `src/features/auth/schemas/*`.
 - **Acceptance:** Invalid credentials remain on the page; fields are not cleared after a network error; authenticated users are redirected away from `/login`.
 - **Verification:** Component tests and one end-to-end success/failure flow.
+- **Completion note (2026-09-05):** Added the Arabic RTL administrator login screen, normalized email/phone validation, password visibility control, loading and error states, fixture credentials, remote `POST /api/v1/admin/auth/login` integration, safe return paths, and a project-local market image. Vitest component/service tests and the Playwright auth flow cover invalid credentials, retained field values, duplicate-submit prevention, successful login, safe route restoration, and authenticated redirection away from `/login`.
 
 ### T07 - Implement session lifecycle
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T04, T06
 - **Objective:** Store and clear admin session data predictably without inventing undocumented backend behavior.
@@ -212,10 +213,11 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/auth/session.ts`, `src/providers/authProvider.ts`.
 - **Acceptance:** Logout clears all session data; expired access tokens fail closed; no token appears in logs or rendered HTML; refresh is implemented only after confirming an admin refresh endpoint.
 - **Verification:** Unit-test storage, expiry boundaries, malformed sessions, and logout.
+- **Completion note (2026-09-05):** Added one session repository backed only by `sessionStorage`, with versioned serialization, server-lifetime expiry, runtime shape validation, inactive-administrator rejection, fail-closed malformed storage handling, access-token delivery to the HTTP client, and complete logout cleanup. Unit and browser tests cover save/load, exact expiry, malformed data, inactive identities, refresh persistence, and clearing. No administrator refresh route was invented.
 
 ### T08 - Protect application routes
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T06, T07
 - **Objective:** Ensure the dashboard shell and feature pages cannot render for anonymous visitors.
@@ -223,6 +225,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/app/App.tsx`, optional `src/app/routes.tsx`, `src/providers/authProvider.ts`.
 - **Acceptance:** Opening any dashboard URL without a session redirects to login; a valid session restores the requested page; logout returns to login.
 - **Verification:** Route tests for anonymous, valid, expired, and malformed sessions.
+- **Completion note (2026-09-05):** Registered the Refine auth provider, wrapped the dashboard shell with `Authenticated`, added a stable session-check screen, preserved the requested location through login, redirected active sessions away from `/login`, and added an accessible header logout action. The committed Playwright test passes for anonymous deep links, failed login, successful route restoration, refresh persistence, logout, malformed sessions, expired sessions, token non-rendering, and 390 px overflow containment.
 
 ### T09 - Connect administrator identity
 
@@ -485,7 +488,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T31 - Add unit testing infrastructure
 
-- **Status:** TODO
+- **Status:** PARTIAL; Vitest, jsdom, shared setup, auth fixtures, and auth unit tests are configured. Coverage configuration and tests for the remaining domains are still TODO.
 - **Priority:** P0
 - **Depends on:** T02-T05
 - **Objective:** Cover pure logic and contracts quickly.
@@ -496,7 +499,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T32 - Add component tests
 
-- **Status:** TODO
+- **Status:** PARTIAL; React Testing Library and user-event cover the login form. Shared controls and remaining feature interactions are still TODO.
 - **Priority:** P1
 - **Depends on:** T13-T16, T31
 - **Objective:** Verify shared controls and high-risk feature interactions from the user’s perspective.
@@ -507,7 +510,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T33 - Add end-to-end workflow tests
 
-- **Status:** TODO
+- **Status:** PARTIAL; Playwright and a deterministic fixture-mode authentication workflow are configured. The remaining administrator workflows are still TODO.
 - **Priority:** P0
 - **Depends on:** T06-T30, T31
 - **Objective:** Protect the nine administrator journeys across routing, providers, and mutation feedback.
