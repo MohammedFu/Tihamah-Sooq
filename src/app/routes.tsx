@@ -2,6 +2,7 @@ import { Authenticated } from "@refinedev/core";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { DashboardLayout } from "../components/layout/DashboardLayout";
 import { AuthCheckingScreen, LoginPage } from "../features/auth";
+import { AuthorizedRoute } from "../features/auth/components/AuthorizedRoute";
 import { BannersPage } from "../features/banners/pages/BannersPage";
 import { CategoriesPage } from "../features/categories/pages/CategoriesPage";
 import { CommissionsPage } from "../features/commissions/pages/CommissionsPage";
@@ -21,15 +22,15 @@ export function AppRoutes() {
           <DashboardLayout />
         </Authenticated>
       }>
-        <Route index element={<OverviewPage />} />
-        <Route path="/listings" element={<ListingsPage />} />
-        <Route path="/users" element={<UsersPage />} />
-        <Route path="/commissions" element={<CommissionsPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/locations" element={<LocationsPage />} />
-        <Route path="/categories" element={<CategoriesPage />} />
-        <Route path="/banners" element={<BannersPage />} />
-        <Route path="/system" element={<SystemPage />} />
+        <Route index element={<AuthorizedRoute resource="dashboard"><OverviewPage /></AuthorizedRoute>} />
+        <Route path="/listings" element={<AuthorizedRoute resource="listings"><ListingsPage /></AuthorizedRoute>} />
+        <Route path="/users" element={<AuthorizedRoute resource="users"><UsersPage /></AuthorizedRoute>} />
+        <Route path="/commissions" element={<AuthorizedRoute resource="commissions"><CommissionsPage /></AuthorizedRoute>} />
+        <Route path="/reports" element={<AuthorizedRoute resource="reports"><ReportsPage /></AuthorizedRoute>} />
+        <Route path="/locations" element={<AuthorizedRoute resource="locations"><LocationsPage /></AuthorizedRoute>} />
+        <Route path="/categories" element={<AuthorizedRoute resource="categories"><CategoriesPage /></AuthorizedRoute>} />
+        <Route path="/banners" element={<AuthorizedRoute resource="banners"><BannersPage /></AuthorizedRoute>} />
+        <Route path="/system" element={<AuthorizedRoute resource="system"><SystemPage /></AuthorizedRoute>} />
         <Route path="*" element={<Navigate replace to="/" />} />
       </Route>
     </Routes>

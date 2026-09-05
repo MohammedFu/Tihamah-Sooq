@@ -45,7 +45,7 @@ npm run test:e2e
 npm run build
 ```
 
-`npm test` runs the unit, component and provider contract suite in jsdom. `npm run test:e2e` runs fixture-mode authentication and data-provider smoke checks at mobile/desktop widths in Microsoft Edge and starts or reuses the local Vite server on port `4173`.
+`npm test` runs the unit, component and provider contract suite in jsdom. `npm run test:e2e` runs fixture-mode authentication, account-menu and data-provider checks at mobile/desktop widths in Microsoft Edge and starts or reuses the local Vite server on port `4173`.
 
 Local development uses fixture mode when no environment file is present. Use [`.env.example`](./.env.example) as the documented configuration reference; never place server secrets in `VITE_*` variables because Vite exposes them to the browser bundle.
 
@@ -63,6 +63,12 @@ Deployed staging and production environments must select an API mode explicitly.
 
 Every dashboard route is protected. Anonymous visitors are sent to `/login`, and a successful login restores the originally requested route. The session is stored in browser `sessionStorage`, expires according to the server-provided lifetime, and is removed on logout or when malformed, expired, or assigned to an inactive administrator. No refresh request is attempted because the current administrator API does not document a refresh endpoint.
 
+The header displays the signed-in administrator's name, returned role and initials. Open the account button to view contact details, the stored session expiry in your browser's local time, and sign out. Enter/Space opens the disclosure, Tab moves through its controls, and Escape closes it and returns focus. Long names are abbreviated only in the header; the account panel shows their full text on mobile and desktop. Missing role details show “الدور غير متاح”; blank names and contacts have neutral fallbacks. No avatar or profile endpoint is assumed. See [the identity implementation notes](./docs/ADMIN_IDENTITY.md).
+
+### Authorization
+
+Navigation, direct routes, and record actions are controlled by the permissions returned in the validated administrator session. Unknown or missing permissions deny access. Unavailable destinations are removed, unavailable action buttons are disabled, and a forbidden direct URL shows a clear state with a link to an available section. Backend authorization remains final: `403` errors keep the administrator signed in, while `401` errors end the invalid session. The normalized action and module mapping is documented in [the access-control guide](./docs/ACCESS_CONTROL.md).
+
 Fixture mode accepts either documented identifier with the development-only password:
 
 | Field | Value |
@@ -71,4 +77,4 @@ Fixture mode accepts either documented identifier with the development-only pass
 | Phone | `+966500000000` |
 | Password | `Admin@123456` |
 
-The operational pages currently update local typed fixtures for workflow review. A registered Refine data provider and explicit admin services now support fixture/remote modes for confirmed contracts. Page integration remains in T17–T25; the next dependency-safe task is dynamic administrator identity (T09). See [the administrative data contract and usage guide](./docs/ADMIN_DATA.md) for supported queries, mutation inputs, cache behavior and blocked contracts.
+The operational pages currently update local typed fixtures for workflow review. A registered Refine data provider and explicit admin services support fixture/remote modes for confirmed contracts, and RBAC now protects the fixture workflows while page integration remains in T17–T25. The next dependency-safe task is authentication and authorization error states (T11). See [the administrative data contract and usage guide](./docs/ADMIN_DATA.md) for supported queries, mutation inputs, cache behavior and blocked contracts.

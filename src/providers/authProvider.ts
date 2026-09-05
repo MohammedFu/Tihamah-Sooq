@@ -5,6 +5,7 @@ import type { AdminAuthService } from "../features/auth/api/authService";
 import type { AdminLoginCredentials } from "../features/auth/schemas/loginSchema";
 import { safeDashboardRedirect } from "../features/auth/schemas/safeRedirect";
 import type { AdminSessionRepository } from "../features/auth/session";
+import { toAdminAccountIdentity } from "../features/auth/identity";
 
 export type AdminLoginParameters = AdminLoginCredentials & Readonly<{
   redirectTo?: string;
@@ -49,7 +50,9 @@ export function createAdminAuthProvider(
       return { error: error instanceof Error ? error : undefined };
     },
     async getIdentity() {
-      return sessions.load()?.admin ?? null;
+      const session = sessions.load();
+      const expiresAt = sessions.getExpiresAt();
+      return session && expiresAt !== null ? toAdminAccountIdentity(session.admin, expiresAt) : null;
     },
     async getPermissions() {
       return sessions.load()?.admin.permissions ?? [];

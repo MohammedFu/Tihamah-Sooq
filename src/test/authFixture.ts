@@ -1,7 +1,8 @@
 import type { AdminSession } from "../types/domain";
 
 export function createAuthFixture(expiresInSeconds = 60): AdminSession {
-  const permissions = [{ id: 1, name: "manage", module: "dashboard", createdAt: null }];
+  const permissions = ["dashboard", "listings", "users", "commissions", "reports", "locations", "categories", "banners", "system"]
+    .map((module, index) => ({ id: index + 1, name: "manage", module, createdAt: null }));
   return {
     admin: {
       id: 1,

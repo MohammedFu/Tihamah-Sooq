@@ -77,7 +77,7 @@ await runAction("village", () => adminServices.villages.update(id, values));
 // Refreshes villages and regions, including a region's embedded village tree.
 ```
 
-Other action scopes cover affected user/listing/commission/report metrics and audit resources. `report` resolution refreshes reports, dashboard and audit; compound actions must invoke their own user/listing scopes. Failed actions invalidate nothing and are not retried automatically. Feature hooks must retain pending/error/form state, prevent duplicate submissions, provide permission checks and confirmations, and refetch after acknowledged mutations. Those page integrations remain in their scheduled tasks.
+Other action scopes cover affected user/listing/commission/report metrics and audit resources. `report` resolution refreshes reports, dashboard and audit; compound actions must invoke their own user/listing scopes. Failed actions invalidate nothing and are not retried automatically. T10 now enforces those compound permissions in the fixture UI; feature hooks must retain pending/error/form state, prevent duplicate submissions, provide confirmations, and refetch after acknowledged mutations as pages move to the provider in their scheduled tasks.
 
 Errors retain `ApiError.kind`, `status`, Refine-compatible `statusCode`, and safe Arabic messages. Invalid mapped responses produce `INVALID_ADMIN_RESPONSE` rather than an empty success. 401 clears the remote session through the HTTP client; 403 and conflicts propagate without changing local records. Loading/success/empty/error states are exposed through Refine query and mutation state without adding temporary product UI.
 

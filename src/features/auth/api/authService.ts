@@ -44,7 +44,11 @@ const fixturePermissions = Object.freeze([
   { id: 2, name: "manage", module: "listings", createdAt: null },
   { id: 3, name: "manage", module: "users", createdAt: null },
   { id: 4, name: "manage", module: "commissions", createdAt: null },
-  { id: 5, name: "manage", module: "system", createdAt: null },
+  { id: 5, name: "manage", module: "reports", createdAt: null },
+  { id: 6, name: "manage", module: "locations", createdAt: null },
+  { id: 7, name: "manage", module: "categories", createdAt: null },
+  { id: 8, name: "manage", module: "banners", createdAt: null },
+  { id: 9, name: "manage", module: "system", createdAt: null },
 ]);
 
 const fixtureSession: AdminSession = Object.freeze({

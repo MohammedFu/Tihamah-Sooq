@@ -2,6 +2,7 @@ import { getEnvironment } from "../config/env";
 import { createFixtureAdminAuthService, createRemoteAdminAuthService } from "../features/auth/api/authService";
 import { createBrowserAdminSessionRepository } from "../features/auth/session";
 import { createAdminAuthProvider } from "../providers/authProvider";
+import { createAdminAccessControlProvider } from "../providers/accessControlProvider";
 import { createConfiguredApiClient } from "../services/http";
 
 export const adminSessionRepository = createBrowserAdminSessionRepository();
@@ -15,3 +16,4 @@ const authService = environment.api.mode === "fixture"
     }));
 
 export const adminAuthProvider = createAdminAuthProvider(authService, adminSessionRepository);
+export const adminAccessControlProvider = createAdminAccessControlProvider(adminSessionRepository);

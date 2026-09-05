@@ -27,11 +27,14 @@ describe("admin session repository", () => {
 
     repository.save(session);
     expect(repository.load()).toEqual(session);
+    expect(repository.getExpiresAt()).toBe(61_000);
 
     now = 60_999;
     expect(repository.load()).toEqual(session);
+    expect(repository.getExpiresAt()).toBe(61_000);
     now = 61_000;
     expect(repository.load()).toBeNull();
+    expect(repository.getExpiresAt()).toBeNull();
     expect(storage.getItem(ADMIN_SESSION_STORAGE_KEY)).toBeNull();
   });
 

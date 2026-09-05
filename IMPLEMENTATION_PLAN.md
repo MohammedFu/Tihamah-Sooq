@@ -62,6 +62,7 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 9. T05 found that Swagger references `dto.VerifyCommissionRequest` without defining it and Postman supplies `{}`. The detailed API guide confirms `{ "status": "verified" }` only. Remote verification therefore permits that payload; rejection and notes remain in local-review mode pending T20 contract confirmation. The shared request type retains them for fixture use.
 10. The executable user-list contract supports `q` and `is_banned`; commission/report lists support `status`, and all three support `page`/`limit`. User geographic filters, report-type filters, and server sorting are not confirmed. T19–T21 must confirm them before enabling remote controls.
 11. Swagger references an absent `dto.TestSMSRequest` and Postman supplies `{}`. T25 must confirm the SMS test body. T05 implements settings list/single/batch/OTP operations; SMS gateway UI integration remains in T25.
+12. T09 confirmed that Swagger's `models.Admin` response does not include a nested role or avatar, while `marketplace_models-v2.go` defines `Role` with `omitempty`. The account UI uses the role only when returned, shows a neutral fallback otherwise, and derives deterministic initials instead of inventing an avatar or profile endpoint.
 
 ## 5. Current Baseline
 
@@ -76,7 +77,8 @@ As of 2026-09-05:
 - Administrator login, session-scoped persistence, expiry validation, logout, and protected route flow are implemented and covered by focused Vitest and Playwright tests. RBAC, broader production API integration, broader automated coverage, and deployment automation remain.
 - `src/data/adminFixtures.ts` is temporary review data, not a production data layer.
 - T05 registers a session-guarded Refine data provider and typed fixture/remote admin services. Catalog CRUD and confirmed operational services are available; the existing pages still require their T17–T25 integrations. Provider fixtures use a separate isolated in-memory store. Contracts and cache usage are documented in `docs/ADMIN_DATA.md`.
-- Verification now includes 49 passing unit/component/provider tests and three passing Playwright workflows, including provider smoke checks at 390/1440 px. Fixture and remote production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
+- The header now uses the administrator identity stored from the confirmed login response. Its accessible account disclosure shows role/contact/session-expiry details, handles missing identity fields safely, and provides keyboard-accessible logout without rendering tokens. Details are documented in `docs/ADMIN_IDENTITY.md`.
+- Verification now includes 64 passing unit/component/provider tests and eight passing Playwright workflows, including identity/provider checks at 390/1440 px and session-expiry behavior. Fixture and remote production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
 
 ## 6. Target Source Structure
 
@@ -236,7 +238,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T09 - Connect administrator identity
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T07, T08
 - **Objective:** Replace hard-coded header identity with the authenticated administrator.
@@ -244,10 +246,11 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/components/layout/Header.tsx`, `src/features/auth/components/AdminMenu.tsx`, `src/providers/authProvider.ts`.
 - **Acceptance:** Long Arabic names do not overflow; unavailable avatar/name fields use deterministic fallbacks; logout is keyboard accessible.
 - **Verification:** Component tests for full and partial identities at mobile and desktop widths.
+- **Completion note (2026-09-05):** Replaced the hard-coded header account with a Refine `useGetIdentity` projection backed by the validated session. Added a credential-free `AdminAccountIdentity`, deterministic Arabic/Latin initials, neutral missing-name/role/contact fallbacks, stored-expiry display in local time, expiry-bound identity revalidation, and a responsive account disclosure with loading, error/retry, missing-session, pending logout, and logout-failure states. Enter/Space, ordinary Tab navigation, outside dismissal, Escape focus restoration, LTR contacts, full long-name display, and duplicate-logout prevention are covered. Swagger does not guarantee nested role data or an avatar/profile endpoint, so the UI neither infers privileges from `role_id` nor invents remote fields. `npm run lint`, all 64 Vitest tests, eight Playwright workflows (including full/partial identities at 390/1440 px and clock-driven expiry), and the fixture production build passed. Screenshots were reviewed for containment and RTL behavior; Vite retains its non-blocking chunk-size advisory. Updated README and `docs/ADMIN_IDENTITY.md`.
 
 ### T10 - Implement role-based access control
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T03, T07
 - **Objective:** Enforce dynamic permissions returned for the administrator role.
@@ -255,6 +258,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/providers/accessControlProvider.ts`, `src/app/resources.ts`, `src/components/layout/navigation.ts`, feature action components.
 - **Acceptance:** Permissions are deny-by-default; hidden UI cannot be restored by changing the URL; a backend `403` produces a clear state without logging out.
 - **Verification:** Permission-matrix unit tests and route/action component tests.
+- **Completion note (2026-09-06):** Registered a Refine access-control provider backed only by the current validated session and added a deny-by-default matrix for list/show/create/edit/delete, moderation, broadcast, settings, and documented module aliases. Unavailable sidebar and dashboard links are removed, every operational route rejects direct unauthorized URLs with a link to the first available section, and fixture workflow actions remain visible but disabled without the required permission. Compound report actions require both report resolution and the affected listing/user permission; system broadcast and audit access are separated. Role names and IDs never imply access, unknown values fail closed, and backend `403` errors retain the session while `401` errors still sign out. Added table-driven provider tests, route/navigation/action component tests, a limited-role Playwright workflow, and `docs/ACCESS_CONTROL.md`; updated README and administrative data notes. `npm run lint`, all 83 Vitest tests, all nine Playwright workflows, and the production build passed. Vite retains its non-blocking chunk-size advisory.
 
 ### T11 - Add authentication and authorization error states
 

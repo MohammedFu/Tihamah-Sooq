@@ -6,6 +6,7 @@ type SessionStorageAdapter = Pick<Storage, "getItem" | "setItem" | "removeItem">
 
 export type AdminSessionRepository = Readonly<{
   load(): AdminSession | null;
+  getExpiresAt(): number | null;
   save(session: AdminSession): void;
   clear(): void;
 }>;
@@ -39,7 +40,7 @@ function isAdminSession(value: unknown): value is AdminSession {
   if (!isRecord(value) || !isRecord(value.admin) || !isRecord(value.tokens)) return false;
   const { admin, tokens } = value;
   return isEntityId(admin.id)
-    && isNonEmptyString(admin.name)
+    && typeof admin.name === "string"
     && typeof admin.email === "string"
     && typeof admin.phone === "string"
     && isEntityId(admin.roleId)
@@ -80,18 +81,20 @@ export function createAdminSessionRepository(
   storage: SessionStorageAdapter,
   now: () => number = Date.now,
 ): AdminSessionRepository {
+  function loadStoredSession(): StoredSession | null {
+    try {
+      const serialized = storage.getItem(ADMIN_SESSION_STORAGE_KEY);
+      if (!serialized) return null;
+      const stored = parseStoredSession(serialized, now());
+      if (!stored) storage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+      return stored;
+    } catch {
+      return null;
+    }
+  }
   return {
-    load() {
-      try {
-        const serialized = storage.getItem(ADMIN_SESSION_STORAGE_KEY);
-        if (!serialized) return null;
-        const stored = parseStoredSession(serialized, now());
-        if (!stored) storage.removeItem(ADMIN_SESSION_STORAGE_KEY);
-        return stored?.session ?? null;
-      } catch {
-        return null;
-      }
-    },
+    load: () => loadStoredSession()?.session ?? null,
+    getExpiresAt: () => loadStoredSession()?.expiresAt ?? null,
     save(session) {
       if (!isAdminSession(session) || !session.admin.isActive) {
         throw new TypeError("Cannot store an invalid or inactive administrator session.");
