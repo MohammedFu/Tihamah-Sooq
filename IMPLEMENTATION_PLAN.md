@@ -66,7 +66,7 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 
 ## 5. Current Baseline
 
-As of 2026-09-06:
+As of 2026-09-07:
 
 - The React/TypeScript/Vite/Refine project exists independently in `D:\dashboard\Tihamah-Sooq`.
 - The application has an Arabic RTL responsive shell, sidebar, header, badges, drawers, modals, toasts, and shared styling.
@@ -79,7 +79,9 @@ As of 2026-09-06:
 - The dashboard design system now follows `Notebook/design-system.pdf`: its exact Rural palette is exposed through semantic tokens, Tajawal is self-hosted across the required weights, and the mobile component language is extended consistently to desktop navigation, data surfaces, tables, drawers, dialogs, and system states. The mapping and contribution rules are documented in `docs/DESIGN_SYSTEM.md`.
 - T05 registers a session-guarded Refine data provider and typed fixture/remote admin services. Catalog CRUD and confirmed operational services are available; the existing pages still require their T17–T25 integrations. Provider fixtures use a separate isolated in-memory store. Contracts and cache usage are documented in `docs/ADMIN_DATA.md`.
 - The header now uses the administrator identity stored from the confirmed login response. Its accessible account disclosure shows role/contact/session-expiry details, handles missing identity fields safely, and provides keyboard-accessible logout without rendering tokens. Details are documented in `docs/ADMIN_IDENTITY.md`.
-- Verification now includes 106 passing unit/component/provider tests and fifteen passing Playwright workflows, including all-route design-system/overflow checks at 390/1440 px, responsive data-table checks at 390/768/1440 px, identity/provider checks, limited-role enforcement, session expiry, safe reauthentication, and requested-route restoration. Production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
+- Shared form infrastructure now uses React Hook Form and Zod, accessible field/error primitives, mutation submission locking, focus-contained/restoring dialogs, dirty-close confirmation, and Refine route/unload warnings. The locations editor is the first integrated reference; remaining page forms migrate with T18-T25. Details are documented in `docs/FORMS.md`.
+- Feature feedback and Refine mutations now share one typed, accessible notification queue with success, error, warning, information, and persistent progress states. Page-local toast timers have been removed, and promise tracking prevents high-risk actions from reporting success before resolution. Details are documented in `docs/NOTIFICATIONS.md`.
+- Verification now includes 119 passing unit/component/provider tests and fifteen established Playwright workflows, including all-route design-system/overflow checks at 390/1440 px, responsive data-table checks at 390/768/1440 px, identity/provider checks, limited-role enforcement, session expiry, safe reauthentication, and requested-route restoration. Production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
 
 ## 6. Target Source Structure
 
@@ -301,7 +303,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T14 - Build reusable form infrastructure
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T12
 - **Objective:** Standardize validation, dirty-state handling, and mutation submission.
@@ -309,10 +311,11 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/components/ui/forms/*`, feature schemas.
 - **Acceptance:** Validation errors connect to fields; submit cannot double-fire; dialogs restore focus; closing a dirty form requires confirmation.
 - **Verification:** Form component tests and keyboard-only checks.
+- **Completion note (2026-09-06):** Added React Hook Form, Zod, and the standard resolver adapter; reusable text/select/textarea/date/toggle/upload fields with explicit accessible error and hint relationships; an async-locking submit button; and a Refine-aware form dialog that blocks dismissal while submitting and confirms discarded dirty state. Mounted React Router's `UnsavedChangesNotifier`, upgraded the shared modal with initial focus, Tab containment, Escape handling, backdrop semantics, and opener focus restoration, and migrated the locations create/edit dialog to a feature-owned Zod schema. Added `docs/FORMS.md`, schema and component tests, and an unexpected-dialog assertion to the responsive browser sweep. Lint, all 112 Vitest tests, and the production build passed. The Playwright run advanced through all 15 existing workflow cases and both responsive design sweeps without reporting an assertion failure, but the Windows runner did not emit its final summary or terminate after completion and was manually interrupted; the focused keyboard/form suite passed cleanly.
 
 ### T15 - Complete the feedback and notification system
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T12
 - **Objective:** Replace page-local timeout toasts with a consistent notification provider.
@@ -320,6 +323,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/components/ui/Toast.tsx`, new notification provider, `src/app/providers.tsx`.
 - **Acceptance:** Notifications do not overlap controls; screen readers announce them; timers clean up on unmount; financial actions never report success before the server confirms.
 - **Verification:** Unit tests for queueing, dismissal, and action callbacks.
+- **Completion note (2026-09-07):** Replaced all seven page-local toast states/timeouts with a single typed notification store and responsive viewport, registered it as Refine's notification provider, and added success, error, warning, information, and persistent keyed-progress states. Notifications expose explicit dismissal, severity-appropriate live-region roles, optional caller-owned actions, timer cleanup, mobile-safe stacking, and promise tracking that replaces progress only after resolution or rejection. Automatic retry is intentionally absent; callers may attach retry only when they have established that repetition is safe. Added queue, Refine adapter, timer, announcement, action, and high-risk promise-ordering tests plus `docs/NOTIFICATIONS.md` and a focused 390/1440 px browser workflow. Lint, all 119 Vitest tests, and the production build passed. The 390 px browser notification assertions passed; after Playwright began the 1440 px case, the Windows runner repeated the existing post-test/teardown stall without reporting an assertion failure and was manually interrupted.
 
 ### T16 - Complete accessibility and RTL review
 

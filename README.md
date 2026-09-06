@@ -41,6 +41,10 @@ The dashboard uses the mobile library in `Notebook/design-system.pdf` as its vis
 
 All dashboard tables use a typed shared renderer with server pagination controls, optional confirmed sorting, URL-restorable search/filter state, accessible loading/error/empty states, and mobile record-card rendering. Feature modules retain their own column definitions and authorized actions. See [the data-table guide](./docs/DATA_TABLE.md).
 
+Shared administrative forms use React Hook Form and Zod, accessible field/error primitives, mutation submission locking, focus-contained dialogs, and Refine-backed dirty navigation warnings. See [the form infrastructure guide](./docs/FORMS.md).
+
+Feature feedback and Refine mutations share a typed notification queue with success, error, warning, information, and persistent progress states. The retry and high-risk mutation rules are documented in [the notification guide](./docs/NOTIFICATIONS.md).
+
 ## Development
 
 ```bash
@@ -85,4 +89,4 @@ Fixture mode accepts either documented identifier with the development-only pass
 | Phone | `+966500000000` |
 | Password | `Admin@123456` |
 
-The operational pages currently update local typed fixtures for workflow review. A registered Refine data provider and explicit admin services support fixture/remote modes for confirmed contracts, and RBAC now protects the fixture workflows while page integration remains in T17–T25. The next dependency-safe task is reusable form infrastructure (T14). See [the administrative data contract and usage guide](./docs/ADMIN_DATA.md) for supported queries, mutation inputs, cache behavior and blocked contracts.
+The operational pages currently update local typed fixtures for workflow review. A registered Refine data provider and explicit admin services support fixture/remote modes for confirmed contracts, and RBAC now protects the fixture workflows while page integration remains in T17–T25. The next dependency-safe task is the accessibility and RTL review (T16). See [the administrative data contract and usage guide](./docs/ADMIN_DATA.md) for supported queries, mutation inputs, cache behavior and blocked contracts.

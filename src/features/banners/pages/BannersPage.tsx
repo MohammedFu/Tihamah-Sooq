@@ -3,9 +3,9 @@ import { useState } from "react";
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
-import { Toast } from "../../../components/ui/Toast";
 import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { initialBanners, type BannerRecord } from "../../../data/adminFixtures";
+import { useAdminNotification } from "../../../providers/notificationStore";
 
 const targetLabels = { category: "قسم", listing: "إعلان", none: "بدون رابط" };
 
@@ -15,8 +15,8 @@ export function BannersPage() {
   const [title, setTitle] = useState("");
   const [targetType, setTargetType] = useState<BannerRecord["targetType"]>("none");
   const [target, setTarget] = useState("");
-  const [toast, setToast] = useState("");
-  function notify(message: string) { setToast(message); window.setTimeout(() => setToast(""), 2600); }
+  const notification = useAdminNotification();
+  function notify(message: string) { notification.success(message); }
   function openEditor(banner: BannerRecord | "new") { setEditor(banner); setTitle(banner === "new" ? "" : banner.title); setTargetType(banner === "new" ? "none" : banner.targetType); setTarget(banner === "new" ? "" : banner.target); }
   function save() {
     if (!title.trim() || !editor) return;
@@ -37,7 +37,6 @@ export function BannersPage() {
         <div className="banner-content"><div className="detail-title-row"><div><h2>{banner.title}</h2><p className="panel-copy">بنر #{banner.id}</p></div><StatusBadge value={banner.isActive ? "enabled" : "disabled"} /></div><div className="banner-meta"><span><Link2 size={15} />{targetLabels[banner.targetType]}: {banner.target}</span><span><CalendarDays size={15} />{banner.startAt} - {banner.endAt}</span></div><div className="banner-actions"><AuthorizedButton resource="banners" action="edit" className="icon-button" type="button" disabled={index === 0} onClick={() => move(index, -1)} aria-label="تحريك للأعلى"><ChevronUp size={17} /></AuthorizedButton><AuthorizedButton resource="banners" action="edit" className="icon-button" type="button" disabled={index === banners.length - 1} onClick={() => move(index, 1)} aria-label="تحريك للأسفل"><ChevronDown size={17} /></AuthorizedButton><AuthorizedButton resource="banners" action="edit" className={`switch ${banner.isActive ? "on" : ""}`} type="button" onClick={() => toggle(banner.id)} aria-label="تغيير الحالة"><i /></AuthorizedButton><span className="spacer" /><AuthorizedButton resource="banners" action="edit" className="icon-button" type="button" onClick={() => openEditor(banner)} aria-label="تعديل"><Pencil size={16} /></AuthorizedButton><AuthorizedButton resource="banners" action="delete" className="icon-button danger-icon" type="button" onClick={() => remove(banner.id)} aria-label="حذف"><Trash2 size={16} /></AuthorizedButton></div></div>
       </article>)}</section>
       <Modal open={Boolean(editor)} title={editor === "new" ? "إضافة بنر جديد" : "تعديل البنر"} onClose={() => setEditor(null)}><label className="form-field"><span>عنوان إداري للبنر</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="مثال: موسم عسل السدر" /></label><label className="upload-field"><Upload size={18} /><span><strong>رفع صورة البنر</strong><small>نسبة مقترحة 16:6 للشاشات الصغيرة</small></span><input type="file" accept="image/*" /></label><div className="form-columns"><label className="form-field"><span>نوع التوجيه</span><select value={targetType} onChange={(event) => setTargetType(event.target.value as BannerRecord["targetType"])}><option value="none">بدون رابط</option><option value="category">فتح قسم</option><option value="listing">فتح إعلان</option></select></label><label className="form-field"><span>القسم أو رقم الإعلان</span><input value={target} onChange={(event) => setTarget(event.target.value)} disabled={targetType === "none"} /></label></div><div className="form-columns"><label className="form-field"><span>تاريخ البدء</span><input type="date" /></label><label className="form-field"><span>تاريخ الانتهاء</span><input type="date" /></label></div><div className="modal-actions"><button className="button secondary" type="button" onClick={() => setEditor(null)}>إلغاء</button><AuthorizedButton resource="banners" action={editor === "new" ? "create" : "edit"} className="button" type="button" disabled={!title.trim()} onClick={save}>حفظ البنر</AuthorizedButton></div></Modal>
-      <Toast message={toast} />
     </>
   );
 }

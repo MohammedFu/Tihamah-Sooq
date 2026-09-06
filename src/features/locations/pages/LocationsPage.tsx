@@ -1,11 +1,14 @@
 import { ChevronDown, ChevronLeft, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { Modal } from "../../../components/ui/Modal";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { FormDialog, TextField, ValidatedForm } from "../../../components/ui/forms";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
-import { Toast } from "../../../components/ui/Toast";
 import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { initialRegions } from "../../../data/adminFixtures";
+import { useAdminNotification } from "../../../providers/notificationStore";
+import { locationSchema, type LocationFormValues } from "../schemas/locationSchema";
 
 type Editor = { type: "region" | "village"; regionId?: number; id?: number; name?: string };
 
@@ -13,23 +16,28 @@ export function LocationsPage() {
   const [regions, setRegions] = useState(initialRegions);
   const [expanded, setExpanded] = useState<number[]>(regions.map((region) => region.id));
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [name, setName] = useState("");
-  const [toast, setToast] = useState("");
+  const notification = useAdminNotification();
+  const { register, handleSubmit, reset, formState: { errors, isDirty, isSubmitting } } = useForm<LocationFormValues>({
+    resolver: zodResolver(locationSchema),
+    defaultValues: { name: "" },
+  });
 
-  function notify(message: string) { setToast(message); window.setTimeout(() => setToast(""), 2600); }
-  function openEditor(next: Editor) { setEditor(next); setName(next.name ?? ""); }
-  function save() {
-    if (!editor || !name.trim()) return;
+  function notify(message: string, type: "success" | "warning" = "success") { notification[type](message); }
+  function openEditor(next: Editor) { setEditor(next); }
+  async function save({ name }: LocationFormValues) {
+    if (!editor) return;
     if (editor.type === "region") {
       setRegions((items) => editor.id ? items.map((item) => item.id === editor.id ? { ...item, name } : item) : [...items, { id: Date.now(), name, isActive: true, villages: [] }]);
     } else if (editor.regionId) {
       setRegions((items) => items.map((region) => region.id === editor.regionId ? { ...region, villages: editor.id ? region.villages.map((village) => village.id === editor.id ? { ...village, name } : village) : [...region.villages, { id: Date.now(), name, isActive: true, activeListings: 0 }] } : region));
     }
-    notify(editor.id ? "تم حفظ التعديلات وتحديث شجرة المواقع" : "تمت الإضافة إلى شجرة المواقع"); setEditor(null); setName("");
+    notify(editor.id ? "تم حفظ التعديلات وتحديث شجرة المواقع" : "تمت الإضافة إلى شجرة المواقع"); setEditor(null); reset({ name: "" });
   }
 
+  useEffect(() => { reset({ name: editor?.name ?? "" }); }, [editor, reset]);
+
   function deleteVillage(regionId: number, villageId: number, activeListings: number) {
-    if (activeListings > 0) { notify(`لا يمكن الحذف: توجد ${activeListings} إعلانات نشطة مرتبطة بالقرية`); return; }
+    if (activeListings > 0) { notify(`لا يمكن الحذف: توجد ${activeListings} إعلانات نشطة مرتبطة بالقرية`, "warning"); return; }
     setRegions((items) => items.map((region) => region.id === regionId ? { ...region, villages: region.villages.filter((village) => village.id !== villageId) } : region)); notify("تم حذف القرية حذفاً لطيفاً");
   }
 
@@ -48,8 +56,12 @@ export function LocationsPage() {
         </section>
         <aside className="card panel integrity-panel"><h2>سلامة البيانات</h2><p className="panel-copy">حذف القرى يتم بصورة آمنة ولا يسمح به عند وجود إعلانات نشطة مرتبطة.</p><div className="integrity-stat"><strong>{regions.reduce((total, region) => total + region.villages.reduce((sum, village) => sum + village.activeListings, 0), 0)}</strong><span>إعلان مرتبط بالمواقع الحالية</span></div><div className="api-note"><small>نقطة الربط</small><code>GET /api/v1/admin/regions</code><code>GET /api/v1/admin/villages</code></div></aside>
       </div>
-      <Modal open={Boolean(editor)} title={editor?.id ? `تعديل ${editor.type === "region" ? "المنطقة" : "القرية"}` : `إضافة ${editor?.type === "region" ? "منطقة" : "قرية"}`} onClose={() => setEditor(null)}><label className="form-field"><span>الاسم بالعربية</span><input value={name} onChange={(event) => setName(event.target.value)} autoFocus placeholder={editor?.type === "region" ? "مثال: جازان - تهامة" : "مثال: قرية المضايا"} /></label><div className="modal-actions"><button className="button secondary" type="button" onClick={() => setEditor(null)}>إلغاء</button>{editor && <AuthorizedButton resource={editor.type === "region" ? "regions" : "villages"} action={editor.id ? "edit" : "create"} className="button" type="button" disabled={!name.trim()} onClick={save}>حفظ</AuthorizedButton>}</div></Modal>
-      <Toast message={toast} />
+      <FormDialog open={Boolean(editor)} title={editor?.id ? `تعديل ${editor.type === "region" ? "المنطقة" : "القرية"}` : `إضافة ${editor?.type === "region" ? "منطقة" : "قرية"}`} dirty={isDirty} submitting={isSubmitting} onClose={() => setEditor(null)}>
+        {(requestClose) => <ValidatedForm className="validated-form" onSubmit={handleSubmit(save)}>
+          <TextField {...register("name")} label="الاسم بالعربية" error={errors.name?.message} autoFocus placeholder={editor?.type === "region" ? "مثال: جازان - تهامة" : "مثال: قرية المضايا"} />
+          <div className="modal-actions"><button className="button secondary" type="button" disabled={isSubmitting} onClick={requestClose}>إلغاء</button>{editor && <AuthorizedButton resource={editor.type === "region" ? "regions" : "villages"} action={editor.id ? "edit" : "create"} className="button" type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>{isSubmitting ? "جارٍ الحفظ…" : "حفظ"}</AuthorizedButton>}</div>
+        </ValidatedForm>}
+      </FormDialog>
     </>
   );
 }

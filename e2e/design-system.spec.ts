@@ -13,7 +13,12 @@ async function login(page: import("@playwright/test").Page) {
 for (const width of [390, 1440]) {
   test(`applies the PDF design system across every dashboard route at ${width}px`, async ({ page }) => {
     const pageErrors: Error[] = [];
+    const unexpectedDialogs: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));
+    page.on("dialog", async (dialog) => {
+      unexpectedDialogs.push(dialog.message());
+      await dialog.dismiss();
+    });
     await page.route("**/*", async (route) => {
       const requestUrl = new URL(route.request().url());
       if (requestUrl.origin === "http://127.0.0.1:4173") await route.continue();
@@ -56,5 +61,6 @@ for (const width of [390, 1440]) {
     }
 
     expect(pageErrors).toEqual([]);
+    expect(unexpectedDialogs).toEqual([]);
   });
 }

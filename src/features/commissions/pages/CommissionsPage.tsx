@@ -5,9 +5,9 @@ import { Drawer } from "../../../components/ui/Drawer";
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
-import { Toast } from "../../../components/ui/Toast";
 import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { initialCommissions, type CommissionRecord, type CommissionStatus } from "../../../data/adminFixtures";
+import { useAdminNotification } from "../../../providers/notificationStore";
 
 function commissionColumns(onSelect: (record: CommissionRecord) => void): DataTableColumn<CommissionRecord>[] {
   return [
@@ -28,7 +28,7 @@ export function CommissionsPage() {
   const [selected, setSelected] = useState<CommissionRecord | null>(null);
   const [rejecting, setRejecting] = useState<CommissionRecord | null>(null);
   const [reason, setReason] = useState("");
-  const [toast, setToast] = useState("");
+  const notification = useAdminNotification();
   const visible = useMemo(() => items.filter((item) => (status === "all" || item.status === status) && `${item.seller} ${item.phone} ${item.listing} ${item.reference}`.toLowerCase().includes(table.search.toLowerCase())), [items, status, table.search]);
   const totalPages = Math.max(1, Math.ceil(visible.length / table.pageSize));
   const page = Math.min(table.page, totalPages);
@@ -39,7 +39,7 @@ export function CommissionsPage() {
   function update(id: number, nextStatus: CommissionStatus, message: string) {
     setItems((records) => records.map((record) => record.id === id ? { ...record, status: nextStatus } : record));
     setSelected((record) => record?.id === id ? { ...record, status: nextStatus } : record);
-    setToast(message); window.setTimeout(() => setToast(""), 2600);
+    notification.success(message);
   }
 
   return (
@@ -61,7 +61,6 @@ export function CommissionsPage() {
         {selected.status === "paid" && <div className="decision-actions"><AuthorizedButton resource="commissions" action="verify" className="button success-button" type="button" onClick={() => update(selected.id, "verified", "تم اعتماد السداد وتحديث ذمة البائع")}><Check size={17} />اعتماد السداد</AuthorizedButton><AuthorizedButton resource="commissions" action="reject" className="button danger-outline" type="button" onClick={() => setRejecting(selected)}><X size={17} />رفض الإشعار</AuthorizedButton></div>}
       </div>}</Drawer>
       <Modal open={Boolean(rejecting)} title="رفض إشعار التحويل" onClose={() => setRejecting(null)}><label className="form-field"><span>سبب الرفض</span><textarea rows={4} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="مثال: المبلغ لا يطابق العمولة المستحقة" /></label><div className="modal-actions"><button className="button secondary" type="button" onClick={() => setRejecting(null)}>إلغاء</button><AuthorizedButton resource="commissions" action="reject" className="button danger-button" type="button" disabled={!reason.trim()} onClick={() => { if (rejecting) update(rejecting.id, "rejected", "تم رفض الإشعار وإرسال السبب للبائع"); setRejecting(null); setReason(""); }}>رفض الإشعار</AuthorizedButton></div></Modal>
-      <Toast message={toast} />
     </>
   );
 }
