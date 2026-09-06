@@ -44,8 +44,8 @@ export function createAdminAuthProvider(
     },
     async onError(error) {
       if (isUnauthorized(error)) {
-        sessions.clear();
-        return { logout: true, redirectTo: "/login", error };
+        sessions.invalidate("unauthorized");
+        return { logout: true, redirectTo: "/session-expired", error };
       }
       return { error: error instanceof Error ? error : undefined };
     },

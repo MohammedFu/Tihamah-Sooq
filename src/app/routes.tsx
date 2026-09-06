@@ -1,8 +1,9 @@
 import { Authenticated } from "@refinedev/core";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { DashboardLayout } from "../components/layout/DashboardLayout";
-import { AuthCheckingScreen, LoginPage } from "../features/auth";
+import { AuthCheckingScreen, LoginPage, SessionExpiredPage, UnauthorizedPage } from "../features/auth";
 import { AuthorizedRoute } from "../features/auth/components/AuthorizedRoute";
+import type { AdminSessionFailure } from "../features/auth/session";
 import { BannersPage } from "../features/banners/pages/BannersPage";
 import { CategoriesPage } from "../features/categories/pages/CategoriesPage";
 import { CommissionsPage } from "../features/commissions/pages/CommissionsPage";
@@ -12,11 +13,14 @@ import { LocationsPage } from "../features/locations/pages/LocationsPage";
 import { ReportsPage } from "../features/reports/pages/ReportsPage";
 import { SystemPage } from "../features/system/pages/SystemPage";
 import { UsersPage } from "../features/users/pages/UsersPage";
+import { adminSessionRepository } from "./authRuntime";
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/session-expired" element={<SessionExpiredPage />} />
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
       <Route element={
         <Authenticated key="dashboard-routes" fallback={<LoginRedirect />} loading={<AuthCheckingScreen />}>
           <DashboardLayout />
@@ -40,5 +44,11 @@ export function AppRoutes() {
 function LoginRedirect() {
   const location = useLocation();
   const from = { pathname: location.pathname, search: location.search, hash: location.hash };
-  return <Navigate replace state={{ from }} to="/login" />;
+  return <Navigate replace state={{ from }} to={sessionFailureRoute(adminSessionRepository.getFailure())} />;
+}
+
+export function sessionFailureRoute(failure: AdminSessionFailure | null) {
+  if (failure === "expired" || failure === "unauthorized") return "/session-expired";
+  if (failure === "invalid" || failure === "inactive") return "/unauthorized";
+  return "/login";
 }

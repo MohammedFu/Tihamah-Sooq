@@ -12,7 +12,7 @@ const authService = environment.api.mode === "fixture"
   ? createFixtureAdminAuthService()
   : createRemoteAdminAuthService(createConfiguredApiClient({
       getAccessToken: () => adminSessionRepository.load()?.tokens.accessToken ?? null,
-      onUnauthorized: () => adminSessionRepository.clear(),
+      onUnauthorized: () => adminSessionRepository.invalidate("unauthorized"),
     }));
 
 export const adminAuthProvider = createAdminAuthProvider(authService, adminSessionRepository);

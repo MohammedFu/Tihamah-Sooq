@@ -1,5 +1,6 @@
 import { Ban, Eye, Search, ShieldCheck, Smartphone, Unlock } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../components/ui/DataTable";
 import { Drawer } from "../../../components/ui/Drawer";
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
@@ -8,10 +9,22 @@ import { Toast } from "../../../components/ui/Toast";
 import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { initialUsers, type UserRecord } from "../../../data/adminFixtures";
 
+function userColumns(onSelect: (user: UserRecord) => void): DataTableColumn<UserRecord>[] {
+  return [
+    { id: "user", header: "المستخدم", cell: (user) => <div className="user-cell"><span>{user.name.slice(0, 1)}</span><div><strong>{user.name}</strong><small dir="ltr">{user.phone}</small></div></div> },
+    { id: "location", header: "الموقع", cell: (user) => <>{user.village}<small className="block-copy">{user.region}</small></> },
+    { id: "joinedAt", header: "تاريخ التسجيل", cell: (user) => user.joinedAt },
+    { id: "listings", header: "الإعلانات", className: "numeric", cell: (user) => user.listings.toLocaleString("ar-SA") },
+    { id: "paidCommission", header: "العمولات المسددة", className: "numeric", cell: (user) => <>{user.paidCommission.toLocaleString("ar-SA")} ر.س</> },
+    { id: "status", header: "حالة الحساب", cell: (user) => <StatusBadge value={user.isBanned ? "banned" : "active"} /> },
+    { id: "action", header: "الإجراء", cell: (user) => <AuthorizedButton resource="users" action="show" className="icon-button table-action" type="button" onClick={() => onSelect(user)} aria-label="عرض المستخدم" title="عرض المستخدم"><Eye size={17} /></AuthorizedButton> },
+  ];
+}
+
 export function UsersPage() {
   const [users, setUsers] = useState(initialUsers);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "active" | "banned">("all");
+  const table = useDataTableUrlState<"status">({ filters: [{ name: "status", defaultValue: "all", values: ["all", "active", "banned"] }], defaultPageSize: 10, pageSizeOptions: [10, 20, 50] });
+  const filter = table.filters.status as "all" | "active" | "banned";
   const [selected, setSelected] = useState<UserRecord | null>(null);
   const [banTarget, setBanTarget] = useState<UserRecord | null>(null);
   const [banReason, setBanReason] = useState("");
@@ -19,8 +32,13 @@ export function UsersPage() {
 
   const visible = useMemo(() => users.filter((user) => {
     const stateMatch = filter === "all" || (filter === "banned" ? user.isBanned : !user.isBanned);
-    return stateMatch && `${user.name} ${user.phone} ${user.village}`.toLowerCase().includes(query.toLowerCase());
-  }), [filter, query, users]);
+    return stateMatch && `${user.name} ${user.phone} ${user.village}`.toLowerCase().includes(table.search.toLowerCase());
+  }), [filter, table.search, users]);
+  const totalPages = Math.max(1, Math.ceil(visible.length / table.pageSize));
+  const page = Math.min(table.page, totalPages);
+  const rows = visible.slice((page - 1) * table.pageSize, page * table.pageSize);
+  const columns = useMemo(() => userColumns(setSelected), []);
+  useEffect(() => { if (table.page > totalPages) table.setPage(totalPages); }, [table.page, totalPages]);
 
   function updateUser(id: number, isBanned: boolean, reason?: string) {
     setUsers((items) => items.map((item) => item.id === id ? { ...item, isBanned, banReason: reason } : item));
@@ -39,10 +57,7 @@ export function UsersPage() {
       <PageHeader title="إدارة المستخدمين" description="البحث في حسابات العملاء، مراجعة نشاطهم، وإدارة الحظر وإبطال الجلسات." />
       <div className="summary-strip"><span><strong>{users.length.toLocaleString("ar-SA")}</strong> حساب مسجل</span><span><strong>{users.filter((user) => !user.isBanned).length}</strong> نشط</span><span><strong>{users.filter((user) => user.isBanned).length}</strong> محظور</span></div>
       <section className="card data-surface">
-        <div className="filters-row"><label className="field-with-icon"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="بحث بالاسم أو رقم الجوال" /></label><select className="select-control" value={filter} onChange={(event) => setFilter(event.target.value as typeof filter)}><option value="all">كل الحسابات</option><option value="active">الحسابات النشطة</option><option value="banned">الحسابات المحظورة</option></select></div>
-        <div className="table-wrap"><table><thead><tr><th>المستخدم</th><th>الموقع</th><th>تاريخ التسجيل</th><th>الإعلانات</th><th>العمولات المسددة</th><th>حالة الحساب</th><th>الإجراء</th></tr></thead><tbody>
-          {visible.map((user) => <tr key={user.id}><td><div className="user-cell"><span>{user.name.slice(0, 1)}</span><div><strong>{user.name}</strong><small dir="ltr">{user.phone}</small></div></div></td><td>{user.village}<small className="block-copy">{user.region}</small></td><td>{user.joinedAt}</td><td className="numeric">{user.listings}</td><td className="numeric">{user.paidCommission.toLocaleString("ar-SA")} ر.س</td><td><StatusBadge value={user.isBanned ? "banned" : "active"} /></td><td><AuthorizedButton resource="users" action="show" className="icon-button table-action" type="button" onClick={() => setSelected(user)} aria-label="عرض المستخدم"><Eye size={17} /></AuthorizedButton></td></tr>)}
-        </tbody></table></div>
+        <DataTable caption="قائمة حسابات المستخدمين" columns={columns} rows={rows} rowKey={(user) => user.id} emptyMessage="لا توجد حسابات مطابقة للفلاتر الحالية." pagination={{ page, pageSize: table.pageSize, total: visible.length, pageSizeOptions: table.pageSizeOptions }} onPageChange={table.setPage} onPageSizeChange={table.setPageSize} toolbar={<div className="filters-row"><label className="field-with-icon"><Search size={16} /><input value={table.search} onChange={(event) => table.setSearch(event.target.value)} placeholder="بحث بالاسم أو رقم الجوال" aria-label="البحث في المستخدمين" /></label><select className="select-control" value={filter} onChange={(event) => table.setFilter("status", event.target.value)} aria-label="تصفية حالة الحساب"><option value="all">كل الحسابات</option><option value="active">الحسابات النشطة</option><option value="banned">الحسابات المحظورة</option></select></div>} />
       </section>
 
       <Drawer open={Boolean(selected)} title={selected?.name ?? ""} onClose={() => setSelected(null)}>{selected && <div className="detail-stack">
