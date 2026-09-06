@@ -12,13 +12,16 @@
   },
   "dependencies": {
     "@fontsource/tajawal": "^5.3.0",
+    "@hookform/resolvers": "^5.9.1",
     "@refinedev/core": "^5.0.0",
     "@refinedev/react-router": "^2.0.0",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hook-form": "^7.87.0",
     "react-router": "7.18.3",
-    "react-router-dom": "7.18.3"
+    "react-router-dom": "7.18.3",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

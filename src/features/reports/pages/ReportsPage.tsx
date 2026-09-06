@@ -5,9 +5,9 @@ import { Drawer } from "../../../components/ui/Drawer";
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
-import { Toast } from "../../../components/ui/Toast";
 import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { initialReports, type ReportRecord, type ReportStatus } from "../../../data/adminFixtures";
+import { useAdminNotification } from "../../../providers/notificationStore";
 
 type Resolution = "dismiss" | "delete" | "ban";
 
@@ -31,7 +31,7 @@ export function ReportsPage() {
   const [selected, setSelected] = useState<ReportRecord | null>(null);
   const [resolution, setResolution] = useState<Resolution | null>(null);
   const [notes, setNotes] = useState("");
-  const [toast, setToast] = useState("");
+  const notification = useAdminNotification();
   const visible = useMemo(() => reports.filter((report) => (status === "all" || report.status === status) && `${report.type} ${report.reporter} ${report.listing} ${report.accused}`.toLowerCase().includes(table.search.toLowerCase())), [reports, status, table.search]);
   const totalPages = Math.max(1, Math.ceil(visible.length / table.pageSize));
   const page = Math.min(table.page, totalPages);
@@ -43,7 +43,7 @@ export function ReportsPage() {
     if (!selected || !resolution || !notes.trim()) return;
     setReports((items) => items.map((item) => item.id === selected.id ? { ...item, status: "resolved" } : item));
     const message = resolution === "dismiss" ? "تم إغلاق البلاغ كبلاغ غير مثبت" : resolution === "delete" ? "تم حذف الإعلان وإغلاق البلاغ" : "تم حظر المعلن وإغلاق البلاغ";
-    setSelected((item) => item ? { ...item, status: "resolved" } : item); setResolution(null); setNotes(""); setToast(message); window.setTimeout(() => setToast(""), 2600);
+    setSelected((item) => item ? { ...item, status: "resolved" } : item); setResolution(null); setNotes(""); notification.success(message);
   }
 
   return (
@@ -61,7 +61,6 @@ export function ReportsPage() {
         {selected.status === "open" && <div className="moderation-menu"><AuthorizedButton resource="reports" action="resolve" type="button" onClick={() => setResolution("dismiss")}><CheckCircle2 size={18} /><span><strong>إغلاق كبلاغ غير مثبت</strong><small>لا يوجد إجراء على الإعلان أو المستخدم</small></span></AuthorizedButton><AuthorizedButton resource="reports" action="resolve" additionallyRequires={[{ resource: "listings", action: "delete" }]} type="button" onClick={() => setResolution("delete")}><Trash2 size={18} /><span><strong>حذف الإعلان المخالف</strong><small>إخفاء الإعلان فوراً من تطبيق الموبايل</small></span></AuthorizedButton><AuthorizedButton resource="reports" action="resolve" additionallyRequires={[{ resource: "users", action: "ban" }]} className="danger" type="button" onClick={() => setResolution("ban")}><Ban size={18} /><span><strong>حظر المعلن</strong><small>إنهاء الجلسات ومنع تسجيل الدخول</small></span></AuthorizedButton></div>}
       </div>}</Drawer>
       <Modal open={Boolean(resolution)} title="توثيق قرار البلاغ" onClose={() => setResolution(null)}><label className="form-field"><span>ملاحظات الإجراء</span><textarea rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="دوّن سبب القرار ليُحفظ في سجل التدقيق" /></label><div className="modal-actions"><button className="button secondary" type="button" onClick={() => setResolution(null)}>إلغاء</button><AuthorizedButton resource="reports" action="resolve" additionallyRequires={resolution === "delete" ? [{ resource: "listings", action: "delete" }] : resolution === "ban" ? [{ resource: "users", action: "ban" }] : []} className="button" type="button" disabled={!notes.trim()} onClick={resolve}>تأكيد وتنفيذ</AuthorizedButton></div></Modal>
-      <Toast message={toast} />
     </>
   );
 }

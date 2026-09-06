@@ -5,9 +5,9 @@ import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
-import { Toast } from "../../../components/ui/Toast";
 import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { initialListings, type Listing, type ListingStatus } from "../../../data/adminFixtures";
+import { useAdminNotification } from "../../../providers/notificationStore";
 
 const filters: Array<{ label: string; value: "all" | ListingStatus }> = [
   { label: "الكل", value: "all" }, { label: "قيد المراجعة", value: "pending_review" }, { label: "نشط", value: "active" }, { label: "تم البيع", value: "sold" }, { label: "مرفوض", value: "rejected" },
@@ -32,7 +32,7 @@ export function ListingsPage() {
   const [selected, setSelected] = useState<Listing | null>(null);
   const [rejecting, setRejecting] = useState<Listing | null>(null);
   const [reason, setReason] = useState("");
-  const [toast, setToast] = useState("");
+  const notification = useAdminNotification();
 
   const visible = useMemo(() => listings.filter((listing) => {
     const matchesStatus = status === "all" || listing.status === status;
@@ -48,7 +48,7 @@ export function ListingsPage() {
   function updateStatus(id: number, nextStatus: ListingStatus, message: string) {
     setListings((items) => items.map((item) => item.id === id ? { ...item, status: nextStatus } : item));
     setSelected((item) => item?.id === id ? { ...item, status: nextStatus } : item);
-    setToast(message); window.setTimeout(() => setToast(""), 2600);
+    notification.success(message);
   }
 
   function reject() {
@@ -60,7 +60,7 @@ export function ListingsPage() {
   function removeListing(listing: Listing) {
     if (!window.confirm(`حذف الإعلان #${listing.id} نهائياً؟`)) return;
     setListings((items) => items.filter((item) => item.id !== listing.id));
-    setSelected(null); setToast("تم حذف الإعلان من قائمة الإدارة");
+    setSelected(null); notification.success("تم حذف الإعلان من قائمة الإدارة");
   }
 
   return (
@@ -85,7 +85,6 @@ export function ListingsPage() {
         </div>}
       </Drawer>
       <Modal open={Boolean(rejecting)} title="رفض الإعلان" onClose={() => setRejecting(null)}><label className="form-field"><span>سبب الرفض</span><select value={reason} onChange={(event) => setReason(event.target.value)}><option value="">اختر سبباً</option><option>سلعة ممنوعة</option><option>صور غير لائقة</option><option>سعر وهمي</option><option>بيانات الإعلان غير مكتملة</option></select></label><label className="form-field"><span>ملاحظات إضافية</span><textarea rows={4} placeholder="ستظهر هذه الملاحظات للمعلن" /></label><div className="modal-actions"><button className="button secondary" type="button" onClick={() => setRejecting(null)}>إلغاء</button><AuthorizedButton resource="listings" action="reject" className="button danger-button" type="button" disabled={!reason} onClick={reject}>رفض وإشعار المعلن</AuthorizedButton></div></Modal>
-      <Toast message={toast} />
     </>
   );
 }

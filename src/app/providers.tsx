@@ -3,7 +3,10 @@ import { createAdminDataProvider } from "../providers/dataProvider";
 import { createFixtureAdminServices } from "../services/admin/fixtureServices";
 import { createAdminServices } from "../services/admin/services";
 import { ApiError, createConfiguredApiClient } from "../services/http";
+import { adminNotificationProvider } from "../providers/notificationProvider";
 import { adminSessionRepository } from "./authRuntime";
+
+export { adminNotificationProvider };
 
 const environment = getEnvironment();
 function assertAuthenticated() {

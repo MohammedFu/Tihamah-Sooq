@@ -5,9 +5,9 @@ import { Drawer } from "../../../components/ui/Drawer";
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
-import { Toast } from "../../../components/ui/Toast";
 import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { initialUsers, type UserRecord } from "../../../data/adminFixtures";
+import { useAdminNotification } from "../../../providers/notificationStore";
 
 function userColumns(onSelect: (user: UserRecord) => void): DataTableColumn<UserRecord>[] {
   return [
@@ -28,7 +28,7 @@ export function UsersPage() {
   const [selected, setSelected] = useState<UserRecord | null>(null);
   const [banTarget, setBanTarget] = useState<UserRecord | null>(null);
   const [banReason, setBanReason] = useState("");
-  const [toast, setToast] = useState("");
+  const notification = useAdminNotification();
 
   const visible = useMemo(() => users.filter((user) => {
     const stateMatch = filter === "all" || (filter === "banned" ? user.isBanned : !user.isBanned);
@@ -43,8 +43,7 @@ export function UsersPage() {
   function updateUser(id: number, isBanned: boolean, reason?: string) {
     setUsers((items) => items.map((item) => item.id === id ? { ...item, isBanned, banReason: reason } : item));
     setSelected((item) => item?.id === id ? { ...item, isBanned, banReason: reason } : item);
-    setToast(isBanned ? "تم حظر الحساب وإنهاء الجلسات النشطة" : "تم إلغاء حظر الحساب");
-    window.setTimeout(() => setToast(""), 2600);
+    notification.success(isBanned ? "تم حظر الحساب وإنهاء الجلسات النشطة" : "تم إلغاء حظر الحساب");
   }
 
   function confirmBan() {
@@ -68,7 +67,6 @@ export function UsersPage() {
         <div className="decision-actions">{selected.isBanned ? <AuthorizedButton resource="users" action="ban" className="button success-button" type="button" onClick={() => updateUser(selected.id, false)}><Unlock size={17} />إلغاء الحظر</AuthorizedButton> : <AuthorizedButton resource="users" action="ban" className="button danger-button" type="button" onClick={() => setBanTarget(selected)}><Ban size={17} />حظر المستخدم</AuthorizedButton>}</div>
       </div>}</Drawer>
       <Modal open={Boolean(banTarget)} title="حظر حساب المستخدم" onClose={() => setBanTarget(null)}><div className="alert-box danger"><Ban size={18} /><p>سيتم إنهاء جميع جلسات المستخدم وإبطال رموز الدخول فورياً.</p></div><label className="form-field"><span>سبب الحظر</span><textarea rows={4} value={banReason} onChange={(event) => setBanReason(event.target.value)} placeholder="اكتب سبباً واضحاً ليُحفظ في سجل التدقيق" /></label><div className="modal-actions"><button className="button secondary" type="button" onClick={() => setBanTarget(null)}>إلغاء</button><AuthorizedButton resource="users" action="ban" className="button danger-button" type="button" disabled={!banReason.trim()} onClick={confirmBan}>تأكيد الحظر</AuthorizedButton></div></Modal>
-      <Toast message={toast} />
     </>
   );
 }

@@ -5,9 +5,9 @@ import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
-import { Toast } from "../../../components/ui/Toast";
 import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { initialCategories, type CategoryRecord } from "../../../data/adminFixtures";
+import { useAdminNotification } from "../../../providers/notificationStore";
 
 const icons: Record<string, LucideIcon> = { car: CarFront, livestock: Beef, property: Home, electronics: Smartphone, agriculture: Wheat };
 
@@ -27,10 +27,10 @@ export function CategoriesPage() {
   const [editor, setEditor] = useState<CategoryRecord | "new" | null>(null);
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("car");
-  const [toast, setToast] = useState("");
+  const notification = useAdminNotification();
   const table = useDataTableUrlState({ defaultPageSize: 10, pageSizeOptions: [10, 20, 50] });
 
-  function notify(message: string) { setToast(message); window.setTimeout(() => setToast(""), 2600); }
+  function notify(message: string) { notification.success(message); }
   function openEditor(category: CategoryRecord | "new") { setEditor(category); setName(category === "new" ? "" : category.name); setIcon(category === "new" ? "car" : category.icon); }
   function save() {
     if (!name.trim() || !editor) return;
@@ -56,7 +56,6 @@ export function CategoriesPage() {
         <DataTable caption="قائمة الأقسام الرئيسية" columns={columns} rows={rows} rowKey={(category) => category.id} emptyMessage="لا توجد أقسام." pagination={{ page, pageSize: table.pageSize, total: categories.length, pageSizeOptions: table.pageSizeOptions }} onPageChange={table.setPage} onPageSizeChange={table.setPageSize} toolbar={<div className="table-toolbar"><div><h2>الأقسام الرئيسية</h2><p className="panel-copy">التغيير في الترتيب أو الحالة ينعكس مباشرة على الشاشة الرئيسية للموبايل.</p></div><span className="record-count">{categories.length} أقسام</span></div>} />
       </section>
       <Modal open={Boolean(editor)} title={editor === "new" ? "إضافة قسم جديد" : "تعديل القسم"} onClose={() => setEditor(null)}><label className="form-field"><span>اسم القسم بالعربية</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder="مثال: مستلزمات منزلية" /></label><fieldset className="icon-picker"><legend>أيقونة القسم</legend><div>{Object.entries(icons).map(([key, Icon]) => <button className={icon === key ? "active" : ""} type="button" key={key} onClick={() => setIcon(key)}><Icon size={22} /></button>)}</div></fieldset><label className="upload-field"><Upload size={18} /><span><strong>رفع أيقونة مخصصة</strong><small>PNG أو SVG، بحد أقصى 500 كيلوبايت</small></span><input type="file" accept="image/png,image/svg+xml" /></label><div className="modal-actions"><button className="button secondary" type="button" onClick={() => setEditor(null)}>إلغاء</button><AuthorizedButton resource="categories" action={editor === "new" ? "create" : "edit"} className="button" type="button" disabled={!name.trim()} onClick={save}>حفظ القسم</AuthorizedButton></div></Modal>
-      <Toast message={toast} />
     </>
   );
 }

@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../components/ui/DataTable";
 import { PageHeader } from "../../../components/ui/PageHeader";
-import { Toast } from "../../../components/ui/Toast";
 import { auditLogs } from "../../../data/adminFixtures";
 import { canAccessWithPermissions } from "../../../providers/accessControlProvider";
+import { useAdminNotification } from "../../../providers/notificationStore";
 import type { Permission } from "../../../types/domain";
 
 type SystemTab = "broadcast" | "audit";
@@ -27,7 +27,7 @@ export function SystemPage() {
   const [audience, setAudience] = useState("all");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [toast, setToast] = useState("");
+  const notification = useAdminNotification();
   const table = useDataTableUrlState({ defaultPageSize: 10, pageSizeOptions: [10, 20, 50] });
   const canBroadcast = permissions.isSuccess && canAccessWithPermissions(permissions.data, "notifications", "broadcast");
   const canAudit = permissions.isSuccess && canAccessWithPermissions(permissions.data, "audit", "list");
@@ -37,7 +37,7 @@ export function SystemPage() {
       else if (canAudit) setTab("audit");
     }
   }, [canAudit, canBroadcast, permissions.isSuccess, tab]);
-  function send() { if (!title.trim() || !body.trim()) return; setToast("تمت جدولة الإشعار للإرسال عبر FCM"); setTitle(""); setBody(""); window.setTimeout(() => setToast(""), 2800); }
+  function send() { if (!title.trim() || !body.trim()) return; notification.success("تمت جدولة الإشعار للإرسال عبر FCM"); setTitle(""); setBody(""); }
   const auditTotalPages = Math.max(1, Math.ceil(auditLogs.length / table.pageSize));
   const auditPage = Math.min(table.page, auditTotalPages);
   const auditRows = auditLogs.slice((auditPage - 1) * table.pageSize, auditPage * table.pageSize);
@@ -53,7 +53,6 @@ export function SystemPage() {
       </div> : canAudit && tab === "audit" ? <section className="card data-surface">
         <DataTable caption="سجل العمليات الإدارية للقراءة فقط" columns={auditColumns} rows={auditRows} rowKey={(log) => log.id} emptyMessage="لا توجد عمليات تدقيق." pagination={{ page: auditPage, pageSize: table.pageSize, total: auditLogs.length, pageSizeOptions: table.pageSizeOptions }} onPageChange={table.setPage} onPageSizeChange={table.setPageSize} toolbar={<div className="table-toolbar"><div><h2>سجل العمليات الإدارية</h2><p className="panel-copy">سجل للقراءة فقط ومحمي من التعديل أو الحذف.</p></div><span className="read-only"><LockKeyhole size={15} />Append-only</span></div>} />
       </section> : permissions.isSuccess ? <section className="card route-state" role="alert"><LockKeyhole size={28} /><p>لا تتوفر أقسام نظامية ضمن صلاحيات حسابك الحالية.</p></section> : null}
-      <Toast message={toast} />
     </>
   );
 }
