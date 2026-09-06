@@ -2,6 +2,7 @@ import { usePermissions } from "@refinedev/core";
 import { ArrowLeft, CircleDollarSign, Flag, MessageSquareText, PackageCheck, ShoppingBag, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { DataTable, type DataTableColumn } from "../../../components/ui/DataTable";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { canAccessWithPermissions } from "../../../providers/accessControlProvider";
@@ -17,6 +18,19 @@ const metrics = [
 ];
 
 const chart = [44, 52, 48, 66, 58, 74, 81, 69, 88, 78, 94, 86];
+type ReviewItem = { id: number; type: string; record: string; owner: string; time: string; status: string };
+const reviewItems: ReviewItem[] = [
+  { id: 1048, type: "إعلان", record: "#1048 - مجموعة أغنام حري", owner: "فواز أبو عبدل", time: "منذ 18 دقيقة", status: "pending_review" },
+  { id: 511, type: "عمولة", record: "#511 - لاندكروزر 2012", owner: "عبدالله الغامدي", time: "منذ 42 دقيقة", status: "paid" },
+  { id: 801, type: "بلاغ", record: "#801 - اشتباه احتيال", owner: "محمود السلمي", time: "منذ 55 دقيقة", status: "open" },
+];
+const reviewColumns: DataTableColumn<ReviewItem>[] = [
+  { id: "type", header: "النوع", cell: (item) => item.type },
+  { id: "record", header: "السجل", cell: (item) => item.record },
+  { id: "owner", header: "صاحب الطلب", cell: (item) => item.owner },
+  { id: "time", header: "الوقت", cell: (item) => item.time },
+  { id: "status", header: "الحالة", cell: (item) => <StatusBadge value={item.status} /> },
+];
 
 export function OverviewPage() {
   return (
@@ -47,12 +61,7 @@ export function OverviewPage() {
 
       <div className="overview-grid overview-bottom">
         <section className="card table-card" style={{ marginTop: 0 }}>
-          <div className="table-toolbar"><div><h2>آخر عناصر المراجعة</h2><p className="panel-copy">العمليات التي تحتاج قراراً إدارياً.</p></div><PermissionLink className="text-link" to="/listings" resource="listings">عرض الكل <ArrowLeft size={15} /></PermissionLink></div>
-          <div className="table-wrap"><table><thead><tr><th>النوع</th><th>السجل</th><th>صاحب الطلب</th><th>الوقت</th><th>الحالة</th></tr></thead><tbody>
-            <tr><td>إعلان</td><td>#1048 - مجموعة أغنام حري</td><td>فواز أبو عبدل</td><td>منذ 18 دقيقة</td><td><StatusBadge value="pending_review" /></td></tr>
-            <tr><td>عمولة</td><td>#511 - لاندكروزر 2012</td><td>عبدالله الغامدي</td><td>منذ 42 دقيقة</td><td><StatusBadge value="paid" /></td></tr>
-            <tr><td>بلاغ</td><td>#801 - اشتباه احتيال</td><td>محمود السلمي</td><td>منذ 55 دقيقة</td><td><StatusBadge value="open" /></td></tr>
-          </tbody></table></div>
+          <DataTable caption="آخر عناصر المراجعة الإدارية" columns={reviewColumns} rows={reviewItems} rowKey={(item) => `${item.type}-${item.id}`} toolbar={<div className="table-toolbar"><div><h2>آخر عناصر المراجعة</h2><p className="panel-copy">العمليات التي تحتاج قراراً إدارياً.</p></div><PermissionLink className="text-link" to="/listings" resource="listings">عرض الكل <ArrowLeft size={15} /></PermissionLink></div>} />
         </section>
         <section className="card panel">
           <h2>طوابير العمل</h2><p className="panel-copy">الأولوية حسب أثرها على المستخدمين.</p>

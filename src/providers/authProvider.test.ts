@@ -62,8 +62,9 @@ describe("Refine administrator auth provider", () => {
 
     const signedInProvider = createAdminAuthProvider({ login: vi.fn().mockResolvedValue(createAuthFixture()) }, sessions);
     await signedInProvider.login({ email: "admin@tihamah.com", password: "secret" });
-    await expect(signedInProvider.onError(loginError)).resolves.toMatchObject({ logout: true, redirectTo: "/login" });
+    await expect(signedInProvider.onError(loginError)).resolves.toMatchObject({ logout: true, redirectTo: "/session-expired" });
     expect((await signedInProvider.check()).authenticated).toBe(false);
+    expect(sessions.getFailure()).toBe("unauthorized");
 
     await signedInProvider.login({ email: "admin@tihamah.com", password: "secret" });
     await expect(signedInProvider.logout({})).resolves.toMatchObject({ success: true, redirectTo: "/login" });
@@ -77,6 +78,16 @@ describe("Refine administrator auth provider", () => {
     const forbidden = new ApiError({ kind: "forbidden", code: "FORBIDDEN", userMessage: "ليست لديك صلاحية." });
 
     await expect(provider.onError(forbidden)).resolves.toEqual({ error: forbidden });
+    await expect(provider.check()).resolves.toMatchObject({ authenticated: true });
+  });
+
+  it("keeps the session for temporary service failures so the request can be retried", async () => {
+    const sessions = createAdminSessionRepository(memoryStorage());
+    const provider = createAdminAuthProvider({ login: vi.fn().mockResolvedValue(createAuthFixture()) }, sessions);
+    await provider.login({ email: "admin@tihamah.com", password: "secret" });
+    const unavailable = new ApiError({ kind: "server", code: "SERVER_ERROR", userMessage: "الخدمة غير متاحة.", retryable: true });
+
+    await expect(provider.onError(unavailable)).resolves.toEqual({ error: unavailable });
     await expect(provider.check()).resolves.toMatchObject({ authenticated: true });
   });
 });

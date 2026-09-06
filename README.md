@@ -35,6 +35,12 @@ The detailed production roadmap and new-chat handoff are maintained in [`IMPLEME
 - `src/types/domain`: Stable dashboard models using `camelCase` fields.
 - `e2e`: Playwright browser workflows.
 
+## Design system
+
+The dashboard uses the mobile library in `Notebook/design-system.pdf` as its visual source of truth and extends it to desktop administrative surfaces. Its exact Rural palette is centralized in semantic CSS tokens, and Tajawal is self-hosted for consistent Arabic and Latin rendering without a runtime font CDN. Shared patterns cover buttons, fields, cards, navigation, tables, filters, badges, feedback, dialogs, drawers, authentication, and error states. See [the design-system guide](./docs/DESIGN_SYSTEM.md) before adding or changing UI styles.
+
+All dashboard tables use a typed shared renderer with server pagination controls, optional confirmed sorting, URL-restorable search/filter state, accessible loading/error/empty states, and mobile record-card rendering. Feature modules retain their own column definitions and authorized actions. See [the data-table guide](./docs/DATA_TABLE.md).
+
 ## Development
 
 ```bash
@@ -69,6 +75,8 @@ The header displays the signed-in administrator's name, returned role and initia
 
 Navigation, direct routes, and record actions are controlled by the permissions returned in the validated administrator session. Unknown or missing permissions deny access. Unavailable destinations are removed, unavailable action buttons are disabled, and a forbidden direct URL shows a clear state with a link to an available section. Backend authorization remains final: `403` errors keep the administrator signed in, while `401` errors end the invalid session. The normalized action and module mapping is documented in [the access-control guide](./docs/ACCESS_CONTROL.md).
 
+Expired sessions and backend `401` responses open a dedicated recovery page before returning to login. Malformed or inactive stored sessions use a separate unauthorized state, while `403` responses keep the current session and temporary network, timeout, rate-limit, or server failures support in-place retry. These states and their integration rules are documented in [the authentication error-state guide](./docs/AUTH_ERROR_STATES.md).
+
 Fixture mode accepts either documented identifier with the development-only password:
 
 | Field | Value |
@@ -77,4 +85,4 @@ Fixture mode accepts either documented identifier with the development-only pass
 | Phone | `+966500000000` |
 | Password | `Admin@123456` |
 
-The operational pages currently update local typed fixtures for workflow review. A registered Refine data provider and explicit admin services support fixture/remote modes for confirmed contracts, and RBAC now protects the fixture workflows while page integration remains in T17–T25. The next dependency-safe task is authentication and authorization error states (T11). See [the administrative data contract and usage guide](./docs/ADMIN_DATA.md) for supported queries, mutation inputs, cache behavior and blocked contracts.
+The operational pages currently update local typed fixtures for workflow review. A registered Refine data provider and explicit admin services support fixture/remote modes for confirmed contracts, and RBAC now protects the fixture workflows while page integration remains in T17–T25. The next dependency-safe task is reusable form infrastructure (T14). See [the administrative data contract and usage guide](./docs/ADMIN_DATA.md) for supported queries, mutation inputs, cache behavior and blocked contracts.

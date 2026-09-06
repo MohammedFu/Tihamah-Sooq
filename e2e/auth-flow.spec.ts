@@ -37,6 +37,9 @@ test("enforces the complete administrator authentication-first flow", async ({ p
 
   await page.evaluate((key) => sessionStorage.setItem(key, "not-json"), sessionKey);
   await page.goto("/commissions");
+  await expect(page).toHaveURL(/\/unauthorized$/);
+  await expect(page.getByRole("heading", { name: "تعذر اعتماد جلسة الدخول" })).toBeVisible();
+  await page.getByRole("link", { name: "الانتقال إلى تسجيل الدخول" }).click();
   await expect(page).toHaveURL(/\/login$/);
   expect(await page.evaluate((key) => sessionStorage.getItem(key), sessionKey)).toBeNull();
 
@@ -47,8 +50,15 @@ test("enforces the complete administrator authentication-first flow", async ({ p
     value: JSON.stringify(expiredSession),
   });
   await page.goto("/reports");
+  await expect(page).toHaveURL(/\/session-expired$/);
+  await expect(page.getByRole("heading", { name: "انتهت جلسة الدخول" })).toBeVisible();
+  await page.getByRole("link", { name: "تسجيل الدخول مجدداً" }).click();
   await expect(page).toHaveURL(/\/login$/);
-  expect(await page.evaluate((key) => sessionStorage.getItem(key), sessionKey)).toBeNull();
+  await page.getByLabel("البريد الإلكتروني أو رقم الجوال").fill("admin@tihamah.com");
+  await page.getByLabel("كلمة المرور", { exact: true }).fill("Admin@123456");
+  await page.getByRole("button", { name: "دخول إلى لوحة الإدارة" }).click();
+  await expect(page).toHaveURL(/\/reports$/);
+  expect(await page.evaluate((key) => sessionStorage.getItem(key), sessionKey)).not.toBeNull();
 
   const viewport = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

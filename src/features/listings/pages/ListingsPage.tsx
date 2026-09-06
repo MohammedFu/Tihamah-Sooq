@@ -1,6 +1,7 @@
 import { Check, Eye, Pause, Play, Search, Trash2, Video, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Drawer } from "../../../components/ui/Drawer";
+import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../components/ui/DataTable";
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
@@ -12,10 +13,22 @@ const filters: Array<{ label: string; value: "all" | ListingStatus }> = [
   { label: "الكل", value: "all" }, { label: "قيد المراجعة", value: "pending_review" }, { label: "نشط", value: "active" }, { label: "تم البيع", value: "sold" }, { label: "مرفوض", value: "rejected" },
 ];
 
+function listingColumns(onSelect: (listing: Listing) => void): DataTableColumn<Listing>[] {
+  return [
+    { id: "listing", header: "الإعلان", cell: (listing) => <div className="record-primary"><img src={listing.image} alt="" /><span><strong>{listing.title}</strong><small>#{listing.id} · {listing.createdAt}</small></span></div> },
+    { id: "seller", header: "المعلن", cell: (listing) => <><strong>{listing.seller}</strong><small className="block-copy" dir="ltr">{listing.phone}</small></> },
+    { id: "location", header: "القسم والموقع", cell: (listing) => <>{listing.category}<small className="block-copy">{listing.village}، {listing.region}</small></> },
+    { id: "price", header: "السعر", sortable: true, className: "numeric", cell: (listing) => <>{listing.price.toLocaleString("ar-SA")} ر.س</> },
+    { id: "views", header: "المشاهدات", sortable: true, className: "numeric", cell: (listing) => listing.views.toLocaleString("ar-SA") },
+    { id: "status", header: "الحالة", cell: (listing) => <StatusBadge value={listing.status} /> },
+    { id: "action", header: "الإجراء", cell: (listing) => <AuthorizedButton resource="listings" action="show" className="icon-button table-action" type="button" onClick={() => onSelect(listing)} aria-label="عرض التفاصيل" title="عرض التفاصيل"><Eye size={17} /></AuthorizedButton> },
+  ];
+}
+
 export function ListingsPage() {
   const [listings, setListings] = useState(initialListings);
-  const [status, setStatus] = useState<"all" | ListingStatus>("all");
-  const [query, setQuery] = useState("");
+  const table = useDataTableUrlState<"status">({ filters: [{ name: "status", defaultValue: "all", values: filters.map((filter) => filter.value) }], sortableFields: ["price", "views"], defaultPageSize: 10, pageSizeOptions: [10, 20, 50] });
+  const status = table.filters.status as "all" | ListingStatus;
   const [selected, setSelected] = useState<Listing | null>(null);
   const [rejecting, setRejecting] = useState<Listing | null>(null);
   const [reason, setReason] = useState("");
@@ -24,8 +37,13 @@ export function ListingsPage() {
   const visible = useMemo(() => listings.filter((listing) => {
     const matchesStatus = status === "all" || listing.status === status;
     const text = `${listing.title} ${listing.seller} ${listing.phone} ${listing.village}`.toLowerCase();
-    return matchesStatus && text.includes(query.toLowerCase());
-  }), [listings, query, status]);
+    return matchesStatus && text.includes(table.search.toLowerCase());
+  }).sort((left, right) => table.sort ? (left[table.sort.field as "price" | "views"] - right[table.sort.field as "price" | "views"]) * (table.sort.order === "asc" ? 1 : -1) : right.id - left.id), [listings, status, table.search, table.sort]);
+  const totalPages = Math.max(1, Math.ceil(visible.length / table.pageSize));
+  const page = Math.min(table.page, totalPages);
+  const rows = visible.slice((page - 1) * table.pageSize, page * table.pageSize);
+  const columns = useMemo(() => listingColumns(setSelected), []);
+  useEffect(() => { if (table.page > totalPages) table.setPage(totalPages); }, [table.page, totalPages]);
 
   function updateStatus(id: number, nextStatus: ListingStatus, message: string) {
     setListings((items) => items.map((item) => item.id === id ? { ...item, status: nextStatus } : item));
@@ -49,12 +67,8 @@ export function ListingsPage() {
     <>
       <PageHeader title="مراجعة الإعلانات" description="مراقبة المحتوى واعتماد أو رفض الإعلانات قبل ظهورها في تطبيق الموبايل." />
       <section className="card data-surface">
-        <div className="tabs-row">{filters.map((filter) => <button className={`tab-button ${status === filter.value ? "active" : ""}`} type="button" key={filter.value} onClick={() => setStatus(filter.value)}>{filter.label}<span>{filter.value === "all" ? listings.length : listings.filter((item) => item.status === filter.value).length}</span></button>)}</div>
-        <div className="filters-row"><label className="field-with-icon"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="بحث بالعنوان أو المعلن أو رقم الجوال" /></label><span className="record-count">{visible.length} إعلان</span></div>
-        <div className="table-wrap"><table><thead><tr><th>الإعلان</th><th>المعلن</th><th>القسم والموقع</th><th>السعر</th><th>المشاهدات</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>
-          {visible.map((listing) => <tr key={listing.id}><td><div className="record-primary"><img src={listing.image} alt="" /><span><strong>{listing.title}</strong><small>#{listing.id} · {listing.createdAt}</small></span></div></td><td><strong>{listing.seller}</strong><small className="block-copy" dir="ltr">{listing.phone}</small></td><td>{listing.category}<small className="block-copy">{listing.village}، {listing.region}</small></td><td className="numeric">{listing.price.toLocaleString("ar-SA")} ر.س</td><td className="numeric">{listing.views.toLocaleString("ar-SA")}</td><td><StatusBadge value={listing.status} /></td><td><AuthorizedButton resource="listings" action="show" className="icon-button table-action" type="button" onClick={() => setSelected(listing)} aria-label="عرض التفاصيل"><Eye size={17} /></AuthorizedButton></td></tr>)}
-        </tbody></table></div>
-        {!visible.length && <div className="empty">لا توجد إعلانات مطابقة للفلاتر الحالية.</div>}
+        <div className="tabs-row">{filters.map((filter) => <button className={`tab-button ${status === filter.value ? "active" : ""}`} type="button" key={filter.value} onClick={() => table.setFilter("status", filter.value)}>{filter.label}<span>{filter.value === "all" ? listings.length : listings.filter((item) => item.status === filter.value).length}</span></button>)}</div>
+        <DataTable caption="قائمة الإعلانات الإدارية" columns={columns} rows={rows} rowKey={(listing) => listing.id} sort={table.sort} onSortChange={table.setSort} emptyMessage="لا توجد إعلانات مطابقة للفلاتر الحالية." pagination={{ page, pageSize: table.pageSize, total: visible.length, pageSizeOptions: table.pageSizeOptions }} onPageChange={table.setPage} onPageSizeChange={table.setPageSize} toolbar={<div className="filters-row"><label className="field-with-icon"><Search size={16} /><input value={table.search} onChange={(event) => table.setSearch(event.target.value)} placeholder="بحث بالعنوان أو المعلن أو رقم الجوال" aria-label="البحث في الإعلانات" /></label><span className="record-count">{visible.length} إعلان</span></div>} />
       </section>
 
       <Drawer open={Boolean(selected)} title={selected ? `الإعلان #${selected.id}` : ""} onClose={() => setSelected(null)}>

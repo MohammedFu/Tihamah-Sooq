@@ -1,0 +1,80 @@
+:root {
+  /* Tihamah mobile design-system palette (Notebook/design-system.pdf). */
+  --color-rural-bg: #f9fafb;
+  --color-rural-gold: #f59e0b;
+  --color-rural-amber: #d97706;
+  --color-rural-green: #2d6a4f;
+  --color-rural-dark: #1b4332;
+
+  /* Desktop/admin semantic colors derived from the five-color source palette. */
+  --color-canvas: var(--color-rural-bg);
+  --color-surface: #ffffff;
+  --color-surface-92: rgb(255 255 255 / 92%);
+  --color-surface-96: rgb(255 255 255 / 96%);
+  --color-surface-subtle: #f3f6f4;
+  --color-surface-muted: #edf2ef;
+  --color-text: var(--color-rural-dark);
+  --color-text-body: #344e41;
+  --color-text-muted: #64746c;
+  --color-text-subtle: #8b9891;
+  --color-border: #dfe7e2;
+  --color-border-strong: #cbd8d0;
+  --color-primary: var(--color-rural-amber);
+  --color-primary-hover: #b45309;
+  --color-primary-soft: #fff7ed;
+  --color-primary-border: #fed7aa;
+  --color-secondary: var(--color-rural-green);
+  --color-secondary-hover: var(--color-rural-dark);
+  --color-secondary-soft: #edf6f1;
+  --color-focus: var(--color-rural-gold);
+  --color-focus-ring: rgb(245 158 11 / 24%);
+  --color-overlay: rgb(27 67 50 / 42%);
+  --color-overlay-strong: rgb(27 67 50 / 86%);
+  --color-success: var(--color-rural-green);
+  --color-success-soft: #edf6f1;
+  --color-warning: #a15c05;
+  --color-warning-soft: #fff7df;
+  --color-danger: #b42318;
+  --color-danger-hover: #912018;
+  --color-danger-soft: #fff1f0;
+  --color-danger-border: #efb1b1;
+  --color-info: var(--color-rural-green);
+  --color-info-soft: #edf6f1;
+  --color-violet: #6d4ac7;
+  --color-violet-soft: #f4f0ff;
+
+  --font-family-sans: "Tajawal", Arial, sans-serif;
+  --font-size-caption: 0.75rem;
+  --font-size-body: 0.875rem;
+  --font-size-title: 1.75rem;
+  --font-size-display: 2.125rem;
+  --line-height-body: 1.65;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  --radius-xs: 0.375rem;
+  --radius-control: 0.625rem;
+  --radius-card: 0.75rem;
+  --radius-round: 999px;
+  --control-height: 2.75rem;
+
+  --shadow-xs: 0 1px 2px rgb(27 67 50 / 5%);
+  --shadow-sm: 0 6px 16px rgb(27 67 50 / 9%);
+  --shadow-md: 0 12px 30px rgb(27 67 50 / 14%);
+  --shadow-lg: 0 20px 50px rgb(27 67 50 / 20%);
+  --shadow-color-xs: rgb(27 67 50 / 3%);
+  --shadow-color-sm: rgb(27 67 50 / 8%);
+  --shadow-color-base: rgb(27 67 50 / 10%);
+  --shadow-color-md: rgb(27 67 50 / 14%);
+  --shadow-color-strong: rgb(27 67 50 / 18%);
+  --shadow-color-lg: rgb(27 67 50 / 22%);
+  --shadow-color-xl: rgb(27 67 50 / 25%);
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+}

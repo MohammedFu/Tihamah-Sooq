@@ -1,14 +1,17 @@
 import type { AdminSession } from "../../types/domain";
 
 export const ADMIN_SESSION_STORAGE_KEY = "tihamah-sooq.admin-session.v1";
+export type AdminSessionFailure = "expired" | "invalid" | "inactive" | "unauthorized";
 
 type SessionStorageAdapter = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 export type AdminSessionRepository = Readonly<{
   load(): AdminSession | null;
   getExpiresAt(): number | null;
+  getFailure(): AdminSessionFailure | null;
   save(session: AdminSession): void;
   clear(): void;
+  invalidate(reason: AdminSessionFailure): void;
 }>;
 
 type StoredSession = Readonly<{
@@ -56,45 +59,61 @@ function isAdminSession(value: unknown): value is AdminSession {
     && tokens.expiresInSeconds > 0;
 }
 
-function parseStoredSession(value: string, now: number): StoredSession | null {
+type StoredSessionResult = Readonly<{ stored: StoredSession | null; failure: AdminSessionFailure | null }>;
+
+function parseStoredSession(value: string, now: number): StoredSessionResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(value);
   } catch {
-    return null;
+    return { stored: null, failure: "invalid" };
   }
 
   if (!isRecord(parsed)
     || parsed.version !== 1
     || typeof parsed.expiresAt !== "number"
     || !Number.isFinite(parsed.expiresAt)
-    || parsed.expiresAt <= now
-    || !isAdminSession(parsed.session)
-    || !parsed.session.admin.isActive) {
-    return null;
+    || !isAdminSession(parsed.session)) {
+    return { stored: null, failure: "invalid" };
   }
 
-  return parsed as StoredSession;
+  if (!parsed.session.admin.isActive) return { stored: null, failure: "inactive" };
+  if (parsed.expiresAt <= now) return { stored: null, failure: "expired" };
+  return { stored: parsed as StoredSession, failure: null };
 }
 
 export function createAdminSessionRepository(
   storage: SessionStorageAdapter,
   now: () => number = Date.now,
 ): AdminSessionRepository {
+  let lastFailure: AdminSessionFailure | null = null;
+
+  function removeStoredSession(reason: AdminSessionFailure | null, force = false) {
+    if (!force && reason && lastFailure === reason) return;
+    lastFailure = reason;
+    try {
+      storage.removeItem(ADMIN_SESSION_STORAGE_KEY);
+    } catch {
+      // A blocked storage API is already a signed-out state.
+    }
+  }
+
   function loadStoredSession(): StoredSession | null {
     try {
       const serialized = storage.getItem(ADMIN_SESSION_STORAGE_KEY);
       if (!serialized) return null;
-      const stored = parseStoredSession(serialized, now());
-      if (!stored) storage.removeItem(ADMIN_SESSION_STORAGE_KEY);
-      return stored;
+      const result = parseStoredSession(serialized, now());
+      if (!result.stored) removeStoredSession(result.failure, true);
+      return result.stored;
     } catch {
+      removeStoredSession("invalid", true);
       return null;
     }
   }
   return {
     load: () => loadStoredSession()?.session ?? null,
     getExpiresAt: () => loadStoredSession()?.expiresAt ?? null,
+    getFailure: () => lastFailure,
     save(session) {
       if (!isAdminSession(session) || !session.admin.isActive) {
         throw new TypeError("Cannot store an invalid or inactive administrator session.");
@@ -102,13 +121,13 @@ export function createAdminSessionRepository(
       const expiresAt = now() + session.tokens.expiresInSeconds * 1000;
       const stored: StoredSession = { version: 1, expiresAt, session };
       storage.setItem(ADMIN_SESSION_STORAGE_KEY, JSON.stringify(stored));
+      lastFailure = null;
     },
     clear() {
-      try {
-        storage.removeItem(ADMIN_SESSION_STORAGE_KEY);
-      } catch {
-        // A blocked storage API is already a signed-out state.
-      }
+      removeStoredSession(null, true);
+    },
+    invalidate(reason) {
+      removeStoredSession(reason);
     },
   };
 }

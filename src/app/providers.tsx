@@ -14,7 +14,7 @@ export const adminServices = environment.api.mode === "fixture"
   ? createFixtureAdminServices({ assertAuthenticated })
   : createAdminServices(createConfiguredApiClient({
       getAccessToken: () => adminSessionRepository.load()?.tokens.accessToken ?? null,
-      onUnauthorized: () => adminSessionRepository.clear(),
+      onUnauthorized: () => adminSessionRepository.invalidate("unauthorized"),
     }), { assertAuthenticated });
 
 export const adminDataProvider = createAdminDataProvider(adminServices, environment.api.baseUrl ?? "/api/v1");

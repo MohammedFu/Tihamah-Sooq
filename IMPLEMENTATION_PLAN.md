@@ -66,7 +66,7 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 
 ## 5. Current Baseline
 
-As of 2026-09-05:
+As of 2026-09-06:
 
 - The React/TypeScript/Vite/Refine project exists independently in `D:\dashboard\Tihamah-Sooq`.
 - The application has an Arabic RTL responsive shell, sidebar, header, badges, drawers, modals, toasts, and shared styling.
@@ -74,11 +74,12 @@ As of 2026-09-05:
 - Each route has an interactive fixture-backed workflow suitable for UI review.
 - Desktop and 390 px mobile browser sweeps passed with no runtime exceptions or document-level horizontal overflow.
 - `npm run build` passes.
-- Administrator login, session-scoped persistence, expiry validation, logout, and protected route flow are implemented and covered by focused Vitest and Playwright tests. RBAC, broader production API integration, broader automated coverage, and deployment automation remain.
+- Administrator login, session-scoped persistence, expiry validation, logout, protected routing, dynamic RBAC, and dedicated authentication/authorization recovery states are implemented and covered by focused Vitest and Playwright tests. Broader production API integration, automated coverage, and deployment automation remain.
 - `src/data/adminFixtures.ts` is temporary review data, not a production data layer.
+- The dashboard design system now follows `Notebook/design-system.pdf`: its exact Rural palette is exposed through semantic tokens, Tajawal is self-hosted across the required weights, and the mobile component language is extended consistently to desktop navigation, data surfaces, tables, drawers, dialogs, and system states. The mapping and contribution rules are documented in `docs/DESIGN_SYSTEM.md`.
 - T05 registers a session-guarded Refine data provider and typed fixture/remote admin services. Catalog CRUD and confirmed operational services are available; the existing pages still require their T17–T25 integrations. Provider fixtures use a separate isolated in-memory store. Contracts and cache usage are documented in `docs/ADMIN_DATA.md`.
 - The header now uses the administrator identity stored from the confirmed login response. Its accessible account disclosure shows role/contact/session-expiry details, handles missing identity fields safely, and provides keyboard-accessible logout without rendering tokens. Details are documented in `docs/ADMIN_IDENTITY.md`.
-- Verification now includes 64 passing unit/component/provider tests and eight passing Playwright workflows, including identity/provider checks at 390/1440 px and session-expiry behavior. Fixture and remote production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
+- Verification now includes 106 passing unit/component/provider tests and fifteen passing Playwright workflows, including all-route design-system/overflow checks at 390/1440 px, responsive data-table checks at 390/768/1440 px, identity/provider checks, limited-role enforcement, session expiry, safe reauthentication, and requested-route restoration. Production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
 
 ## 6. Target Source Structure
 
@@ -262,7 +263,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T11 - Add authentication and authorization error states
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T08-T10
 - **Objective:** Give administrators clear recovery paths for expired sessions, forbidden actions, and unavailable services.
@@ -270,23 +271,25 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/auth/pages/*`, `src/components/ui/ErrorState.tsx`, route configuration.
 - **Acceptance:** `401` logs out once and redirects safely; `403` stays authenticated; retry is available for temporary failures.
 - **Verification:** Provider and route tests for each error class.
+- **Completion note (2026-09-06):** Added a shared Arabic `ErrorState` for unauthorized, expired-session, forbidden, temporary-service, and generic failures, including guarded retry, retry-after guidance, and LTR request references. The session repository now distinguishes expiry, malformed storage, inactive administrators, and backend authorization invalidation without retaining credentials in route state. Public `/session-expired` and `/unauthorized` recovery routes avoid authentication redirect loops and carry the sanitized requested dashboard destination back through login. Ordinary anonymous visits still open login directly; `401` clears the session and redirects once to expiry recovery, `403` retains the session, and network/timeout/`429`/`5xx` states can retry in place so owning feature state remains mounted. Swagger exposes a shallow error response while the unified specification documents a nested error object; the existing normalizer continues to accept both, and no unconfirmed administrator refresh route was added. Updated the authentication browser flow, provider/session/route/component tests, README, and `docs/AUTH_ERROR_STATES.md`. `npm run lint`, all 97 Vitest tests, all nine Playwright workflows, and the production build passed. Vite retains its non-blocking chunk-size advisory.
 
 ## 10. Phase 3: Shared Production UI
 
 ### T12 - Formalize design tokens and component states
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T01
 - **Objective:** Turn the current stylesheet into a maintainable project-owned design system.
-- **Implementation:** Extract color, spacing, typography, focus, border, elevation, and semantic-status tokens. Preserve the restrained TailAdmin-inspired visual language without changing TailAdmin files. Add dark mode only if explicitly requested.
+- **Implementation:** Extract color, spacing, typography, focus, border, elevation, and semantic-status tokens. Use `Notebook/design-system.pdf` as the visual source of truth, extend its mobile patterns to desktop administration without changing Notebook/TailAdmin files, and use Tajawal throughout. Add dark mode only if explicitly requested.
 - **Primary files:** `src/styles/index.css`, optional `src/styles/tokens.css` and component-specific styles.
-- **Acceptance:** No one-off colors for common states; focus styles are visible; cards remain at 8 px radius or less; all tokens work in RTL.
+- **Acceptance:** No one-off colors for common states; focus styles are visible; cards use the PDF-derived 12 px radius; all tokens work in RTL.
 - **Verification:** Visual comparison on all nine routes and CSS color scan.
+- **Completion note (2026-09-06):** Adopted the user-supplied one-page mobile design library as the dashboard visual source of truth. Added project-owned semantic color, typography, spacing, focus, radius, elevation, motion, and status tokens based on the exact Rural palette (`#F9FAFB`, `#F59E0B`, `#D97706`, `#2D6A4F`, `#1B4332`). Self-hosted Tajawal 400/500/700/800 through Fontsource and applied it globally. Reworked shared buttons, icon controls, fields, cards, navigation, tables, badges, toasts, authentication/error states, drawers, and modals while extending missing desktop/admin patterns without editing Notebook or TailAdmin. Added reduced-motion handling, token-source tests that reject component-level literal colors/unresolved variables, and a Playwright sweep covering every dashboard route at 390/1440 px. Both 9-route viewport sweeps passed independently with exact computed palette/font/RTL assertions, no runtime errors, no page-level overflow, and PDF-radius compliance. See `docs/DESIGN_SYSTEM.md`.
 
 ### T13 - Build a reusable server data table
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T05, T12
 - **Objective:** Remove repeated table plumbing while keeping feature-specific columns and actions readable.
@@ -294,6 +297,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/components/ui/DataTable/*`, feature column definitions.
 - **Acceptance:** URL query state can be restored; changing filters resets the page; table width never expands the document; actions have labels/tooltips.
 - **Verification:** Component tests and 390/768/1440 px screenshots.
+- **Completion note (2026-09-06):** Added a generic controlled `DataTable` and URL-state hook under `src/components/ui/DataTable`, with feature-owned typed columns and cells, accessible sorting controls, server pagination, loading skeletons, empty and retryable error states, and a mobile row-card layout. Migrated every dashboard table in listings, users, commissions, reports, categories, system audit, and overview. Listings expose the locally supported price/view sorting; users, commissions, and reports intentionally omit unsupported sorting because the Notebook Swagger contracts only confirm filtering and pagination for those endpoints. Added focused component and URL-state tests, responsive Playwright workflows at 390px/768px/1440px, and `docs/DATA_TABLE.md`. Verification passed: 6 focused tests, 106 total Vitest tests, 4 focused table workflows, all 15 Playwright workflows, lint, and production build (with only Vite's existing chunk-size advisory).
 
 ### T14 - Build reusable form infrastructure
 
