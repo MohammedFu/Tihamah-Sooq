@@ -1,72 +1,490 @@
-import { Ban, Eye, Search, ShieldCheck, Smartphone, Unlock } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useGetIdentity } from "@refinedev/core";
+import { Ban, Eye, Info, Search, Unlock } from "lucide-react";
+import { useDeferredValue, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../components/ui/DataTable";
 import { Drawer } from "../../../components/ui/Drawer";
+import { FormDialog, SubmitButton, TextareaField, ValidatedForm } from "../../../components/ui/forms";
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
-import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
-import { initialUsers, type UserRecord } from "../../../data/adminFixtures";
 import { useAdminNotification } from "../../../providers/notificationStore";
+import { ApiError } from "../../../services/http";
+import type { AdminAccountIdentity, User } from "../../../types/domain";
+import { useUsers } from "../api/useUsers";
+import { userBanSchema, type UserBanFormValues } from "../schemas/userBanSchema";
 
-function userColumns(onSelect: (user: UserRecord) => void): DataTableColumn<UserRecord>[] {
+const statusFilters = [
+  { value: "all", label: "كل الحسابات" },
+  { value: "active", label: "الحسابات النشطة" },
+  { value: "banned", label: "الحسابات المحظورة" },
+] as const;
+
+const dateFormatter = new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium" });
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? value : dateFormatter.format(parsed);
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof ApiError) return error.userMessage;
+  if (error instanceof Error) return error.message;
+  return "تعذر إكمال العملية، يرجى المحاولة مرة أخرى.";
+}
+
+function userColumns(
+  onSelect: (user: User) => void,
+  onBan: (user: User) => void,
+  onUnban: (user: User) => void,
+  isSelfAdmin: (user: User) => boolean,
+  pending: boolean,
+): DataTableColumn<User>[] {
   return [
-    { id: "user", header: "المستخدم", cell: (user) => <div className="user-cell"><span>{user.name.slice(0, 1)}</span><div><strong>{user.name}</strong><small dir="ltr">{user.phone}</small></div></div> },
-    { id: "location", header: "الموقع", cell: (user) => <>{user.village}<small className="block-copy">{user.region}</small></> },
-    { id: "joinedAt", header: "تاريخ التسجيل", cell: (user) => user.joinedAt },
-    { id: "listings", header: "الإعلانات", className: "numeric", cell: (user) => user.listings.toLocaleString("ar-SA") },
-    { id: "paidCommission", header: "العمولات المسددة", className: "numeric", cell: (user) => <>{user.paidCommission.toLocaleString("ar-SA")} ر.س</> },
-    { id: "status", header: "حالة الحساب", cell: (user) => <StatusBadge value={user.isBanned ? "banned" : "active"} /> },
-    { id: "action", header: "الإجراء", cell: (user) => <AuthorizedButton resource="users" action="show" className="icon-button table-action" type="button" onClick={() => onSelect(user)} aria-label="عرض المستخدم" title="عرض المستخدم"><Eye size={17} /></AuthorizedButton> },
+    {
+      id: "user",
+      header: "المستخدم",
+      cell: (user) => (
+        <div className="user-cell">
+          <span>{user.fullName.slice(0, 1)}</span>
+          <div>
+            <strong>{user.fullName}</strong>
+            <small dir="ltr">{user.phone}</small>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "location",
+      header: "الموقع",
+      cell: (user) => (
+        <>
+          {user.villageName ?? user.village?.name ?? "—"}
+          <small className="block-copy">{user.regionName ?? user.region?.name ?? ""}</small>
+        </>
+      ),
+    },
+    {
+      id: "joinedAt",
+      header: "تاريخ التسجيل",
+      cell: (user) => formatDate(user.createdAt),
+    },
+    {
+      id: "status",
+      header: "حالة الحساب",
+      cell: (user) => <StatusBadge value={user.isBanned ? "banned" : "active"} />,
+    },
+    {
+      id: "action",
+      header: "الإجراء",
+      cell: (user) => {
+        const isSelf = isSelfAdmin(user);
+        return (
+          <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
+            <AuthorizedButton
+              resource="users"
+              action="show"
+              className="icon-button table-action"
+              type="button"
+              onClick={() => onSelect(user)}
+              aria-label={`عرض بيانات ${user.fullName}`}
+              title="عرض المستخدم"
+            >
+              <Eye size={17} />
+            </AuthorizedButton>
+            {user.isBanned ? (
+              <AuthorizedButton
+                resource="users"
+                action="ban"
+                className="icon-button table-action success"
+                type="button"
+                disabled={pending}
+                onClick={() => onUnban(user)}
+                aria-label={`إلغاء حظر ${user.fullName}`}
+                title="إلغاء الحظر"
+              >
+                <Unlock size={17} />
+              </AuthorizedButton>
+            ) : (
+              <AuthorizedButton
+                resource="users"
+                action="ban"
+                className="icon-button table-action danger"
+                type="button"
+                disabled={pending || isSelf}
+                onClick={() => onBan(user)}
+                aria-label={isSelf ? "لا يمكن للمشرف حظر حسابه الخاص" : `حظر ${user.fullName}`}
+                title={isSelf ? "لا يمكن للمشرف حظر حسابه الخاص" : "حظر المستخدم"}
+              >
+                <Ban size={17} />
+              </AuthorizedButton>
+            )}
+          </div>
+        );
+      },
+    },
   ];
 }
 
 export function UsersPage() {
-  const [users, setUsers] = useState(initialUsers);
-  const table = useDataTableUrlState<"status">({ filters: [{ name: "status", defaultValue: "all", values: ["all", "active", "banned"] }], defaultPageSize: 10, pageSizeOptions: [10, 20, 50] });
-  const filter = table.filters.status as "all" | "active" | "banned";
-  const [selected, setSelected] = useState<UserRecord | null>(null);
-  const [banTarget, setBanTarget] = useState<UserRecord | null>(null);
-  const [banReason, setBanReason] = useState("");
+  const table = useDataTableUrlState<"status">({
+    filters: [{ name: "status", defaultValue: "all", values: statusFilters.map((f) => f.value) }],
+    defaultPageSize: 10,
+    pageSizeOptions: [10, 20, 50],
+  });
+  const status = (table.filters.status as "all" | "active" | "banned") || "all";
+  const deferredSearch = useDeferredValue(table.search);
+
+  const api = useUsers({
+    page: table.page,
+    pageSize: table.pageSize,
+    status,
+    search: deferredSearch,
+  });
+
+  const identity = useGetIdentity<AdminAccountIdentity | null>();
+  const currentAdmin = identity.data;
+
+  function isSelfAdmin(user: User | null | undefined): boolean {
+    if (!user || !currentAdmin) return false;
+    const adminPhone = currentAdmin.phone?.trim();
+    const userPhone = user.phone?.trim();
+    if (adminPhone && userPhone && adminPhone === userPhone) return true;
+    if (currentAdmin.id === user.id) return true;
+    return false;
+  }
+
+  const [selected, setSelected] = useState<User | null>(null);
+  const [banTarget, setBanTarget] = useState<User | null>(null);
+  const [unbanTarget, setUnbanTarget] = useState<User | null>(null);
+  const [actionError, setActionError] = useState<unknown>(null);
+
   const notification = useAdminNotification();
+  const banForm = useForm<UserBanFormValues>({
+    resolver: zodResolver(userBanSchema),
+    defaultValues: { reason: "" },
+  });
 
-  const visible = useMemo(() => users.filter((user) => {
-    const stateMatch = filter === "all" || (filter === "banned" ? user.isBanned : !user.isBanned);
-    return stateMatch && `${user.name} ${user.phone} ${user.village}`.toLowerCase().includes(table.search.toLowerCase());
-  }), [filter, table.search, users]);
-  const totalPages = Math.max(1, Math.ceil(visible.length / table.pageSize));
-  const page = Math.min(table.page, totalPages);
-  const rows = visible.slice((page - 1) * table.pageSize, page * table.pageSize);
-  const columns = useMemo(() => userColumns(setSelected), []);
-  useEffect(() => { if (table.page > totalPages) table.setPage(totalPages); }, [table.page, totalPages]);
+  const rows = api.list.result.data ?? [];
+  const total = api.list.result.total ?? 0;
+  const pending = api.update.mutation.isPending;
 
-  function updateUser(id: number, isBanned: boolean, reason?: string) {
-    setUsers((items) => items.map((item) => item.id === id ? { ...item, isBanned, banReason: reason } : item));
-    setSelected((item) => item?.id === id ? { ...item, isBanned, banReason: reason } : item);
-    notification.success(isBanned ? "تم حظر الحساب وإنهاء الجلسات النشطة" : "تم إلغاء حظر الحساب");
+  function openBan(user: User) {
+    if (isSelfAdmin(user)) return;
+    setActionError(null);
+    banForm.reset({ reason: "" });
+    setBanTarget(user);
   }
 
-  function confirmBan() {
-    if (!banTarget || !banReason.trim()) return;
-    updateUser(banTarget.id, true, banReason); setBanTarget(null); setBanReason("");
+  function openUnban(user: User) {
+    setActionError(null);
+    setUnbanTarget(user);
   }
+
+  async function handleBan(values: UserBanFormValues) {
+    if (!banTarget || isSelfAdmin(banTarget)) return;
+    const target = banTarget;
+    setActionError(null);
+    try {
+      await notification.trackPromise(
+        () => api.ban(target.id, { isBanned: true, reason: values.reason }),
+        {
+          key: `user-${target.id}-ban`,
+          progress: "جارٍ حظر الحساب وإنهاء الجلسات النشطة…",
+          success: "تم حظر الحساب وإنهاء جميع الجلسات النشطة للمستخدم فورياً.",
+          error: (err) => errorMessage(err),
+        },
+      );
+      setSelected((current) => (current?.id === target.id ? { ...current, isBanned: true, banReason: values.reason } : current));
+      setBanTarget(null);
+      banForm.reset();
+    } catch (err) {
+      setActionError(err);
+    }
+  }
+
+  async function handleUnban() {
+    if (!unbanTarget) return;
+    const target = unbanTarget;
+    setActionError(null);
+    try {
+      await notification.trackPromise(
+        () => api.ban(target.id, { isBanned: false }),
+        {
+          key: `user-${target.id}-unban`,
+          progress: "جارٍ إلغاء حظر الحساب…",
+          success: "تم إلغاء حظر الحساب بنجاح.",
+          error: (err) => errorMessage(err),
+        },
+      );
+      setSelected((current) => (current?.id === target.id ? { ...current, isBanned: false, banReason: null } : current));
+      setUnbanTarget(null);
+    } catch (err) {
+      setActionError(err);
+    }
+  }
+
+  const columns = useMemo(
+    () => userColumns((user) => setSelected(user), openBan, openUnban, isSelfAdmin, pending),
+    [currentAdmin, pending],
+  );
 
   return (
     <>
-      <PageHeader title="إدارة المستخدمين" description="البحث في حسابات العملاء، مراجعة نشاطهم، وإدارة الحظر وإبطال الجلسات." />
-      <div className="summary-strip"><span><strong>{users.length.toLocaleString("ar-SA")}</strong> حساب مسجل</span><span><strong>{users.filter((user) => !user.isBanned).length}</strong> نشط</span><span><strong>{users.filter((user) => user.isBanned).length}</strong> محظور</span></div>
+      <PageHeader
+        title="إدارة المستخدمين"
+        description="البحث في حسابات العملاء، مراجعة نشاطهم، وإدارة الحظر وإبطال الجلسات."
+      />
+
       <section className="card data-surface">
-        <DataTable caption="قائمة حسابات المستخدمين" columns={columns} rows={rows} rowKey={(user) => user.id} emptyMessage="لا توجد حسابات مطابقة للفلاتر الحالية." pagination={{ page, pageSize: table.pageSize, total: visible.length, pageSizeOptions: table.pageSizeOptions }} onPageChange={table.setPage} onPageSizeChange={table.setPageSize} toolbar={<div className="filters-row"><label className="field-with-icon"><Search size={16} /><input value={table.search} onChange={(event) => table.setSearch(event.target.value)} placeholder="بحث بالاسم أو رقم الجوال" aria-label="البحث في المستخدمين" /></label><select className="select-control" value={filter} onChange={(event) => table.setFilter("status", event.target.value)} aria-label="تصفية حالة الحساب"><option value="all">كل الحسابات</option><option value="active">الحسابات النشطة</option><option value="banned">الحسابات المحظورة</option></select></div>} />
+        <div className="tabs-row" role="group" aria-label="تصفية المستخدمين حسب الحالة">
+          {statusFilters.map((filter) => (
+            <button
+              className={`tab-button ${status === filter.value ? "active" : ""}`}
+              type="button"
+              key={filter.value}
+              aria-pressed={status === filter.value}
+              onClick={() => table.setFilter("status", filter.value)}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+
+        <DataTable
+          caption="قائمة حسابات المستخدمين"
+          columns={columns}
+          rows={rows}
+          rowKey={(user) => user.id}
+          loading={api.list.query.isPending}
+          error={api.list.query.isError ? api.list.query.error : undefined}
+          onRetry={() => { void api.list.query.refetch(); }}
+          retrying={api.list.query.isFetching}
+          emptyMessage="لا توجد حسابات مطابقة للفلاتر الحالية."
+          pagination={{
+            page: table.page,
+            pageSize: table.pageSize,
+            total,
+            pageSizeOptions: table.pageSizeOptions,
+          }}
+          onPageChange={table.setPage}
+          onPageSizeChange={table.setPageSize}
+          toolbar={
+            <div className="filters-row">
+              <label className="field-with-icon">
+                <Search aria-hidden="true" size={16} />
+                <input
+                  value={table.search}
+                  onChange={(event) => table.setSearch(event.target.value)}
+                  placeholder="بحث بالاسم أو رقم الجوال"
+                  aria-label="البحث في المستخدمين"
+                />
+              </label>
+              <span className="record-count">{total.toLocaleString("ar-SA")} مستخدم</span>
+            </div>
+          }
+        />
       </section>
 
-      <Drawer open={Boolean(selected)} title={selected?.name ?? ""} onClose={() => setSelected(null)}>{selected && <div className="detail-stack">
-        <div className="profile-hero"><span>{selected.name.slice(0, 1)}</span><div><h3>{selected.name}</h3><p dir="ltr">{selected.phone}</p></div><StatusBadge value={selected.isBanned ? "banned" : "active"} /></div>
-        {selected.banReason && <div className="alert-box danger"><Ban size={18} /><div><strong>سبب الحظر</strong><p>{selected.banReason}</p></div></div>}
-        <dl className="detail-grid"><div><dt>المنطقة</dt><dd>{selected.region}</dd></div><div><dt>القرية</dt><dd>{selected.village}</dd></div><div><dt>تاريخ التسجيل</dt><dd>{selected.joinedAt}</dd></div><div><dt>عدد الإعلانات</dt><dd>{selected.listings}</dd></div><div><dt>العمولات المسددة</dt><dd>{selected.paidCommission.toLocaleString("ar-SA")} ر.س</dd></div><div><dt>الأجهزة النشطة</dt><dd>2</dd></div></dl>
-        <div className="activity-list"><h3>آخر نشاطات الحساب</h3><div><Smartphone size={17} /><span><strong>آخر تسجيل دخول</strong><small>اليوم، 08:35 · Android</small></span></div><div><ShieldCheck size={17} /><span><strong>آخر إعلان</strong><small>منذ 18 دقيقة · قيد المراجعة</small></span></div></div>
-        <div className="decision-actions">{selected.isBanned ? <AuthorizedButton resource="users" action="ban" className="button success-button" type="button" onClick={() => updateUser(selected.id, false)}><Unlock size={17} />إلغاء الحظر</AuthorizedButton> : <AuthorizedButton resource="users" action="ban" className="button danger-button" type="button" onClick={() => setBanTarget(selected)}><Ban size={17} />حظر المستخدم</AuthorizedButton>}</div>
-      </div>}</Drawer>
-      <Modal open={Boolean(banTarget)} title="حظر حساب المستخدم" onClose={() => setBanTarget(null)}><div className="alert-box danger"><Ban size={18} /><p>سيتم إنهاء جميع جلسات المستخدم وإبطال رموز الدخول فورياً.</p></div><label className="form-field"><span>سبب الحظر</span><textarea rows={4} value={banReason} onChange={(event) => setBanReason(event.target.value)} placeholder="اكتب سبباً واضحاً ليُحفظ في سجل التدقيق" /></label><div className="modal-actions"><button className="button secondary" type="button" onClick={() => setBanTarget(null)}>إلغاء</button><AuthorizedButton resource="users" action="ban" className="button danger-button" type="button" disabled={!banReason.trim()} onClick={confirmBan}>تأكيد الحظر</AuthorizedButton></div></Modal>
+      <Drawer
+        open={Boolean(selected)}
+        title={selected ? selected.fullName : ""}
+        onClose={() => { if (!pending) setSelected(null); }}
+      >
+        {selected && (
+          <div className="detail-stack">
+            <div className="profile-hero">
+              <span>{selected.fullName.slice(0, 1)}</span>
+              <div>
+                <h3>{selected.fullName}</h3>
+                <p dir="ltr">{selected.phone}</p>
+              </div>
+              <StatusBadge value={selected.isBanned ? "banned" : "active"} />
+            </div>
+
+            {selected.isBanned && selected.banReason && (
+              <div className="alert-box danger">
+                <Ban size={18} />
+                <div>
+                  <strong>سبب الحظر</strong>
+                  <p>{selected.banReason}</p>
+                </div>
+              </div>
+            )}
+
+            <dl className="detail-grid">
+              <div>
+                <dt>المنطقة</dt>
+                <dd>{selected.regionName ?? selected.region?.name ?? "—"}</dd>
+              </div>
+              <div>
+                <dt>القرية</dt>
+                <dd>{selected.villageName ?? selected.village?.name ?? "—"}</dd>
+              </div>
+              <div>
+                <dt>تاريخ التسجيل</dt>
+                <dd>{formatDate(selected.createdAt)}</dd>
+              </div>
+              {selected.stats && (
+                <>
+                  <div>
+                    <dt>إجمالي الإعلانات</dt>
+                    <dd className="numeric">{selected.stats.totalListings.toLocaleString("ar-SA")}</dd>
+                  </div>
+                  <div>
+                    <dt>الإعلانات النشطة</dt>
+                    <dd className="numeric">{selected.stats.activeListings.toLocaleString("ar-SA")}</dd>
+                  </div>
+                  <div>
+                    <dt>الإعلانات المباعة</dt>
+                    <dd className="numeric">{selected.stats.soldListings.toLocaleString("ar-SA")}</dd>
+                  </div>
+                  <div>
+                    <dt>العمولات</dt>
+                    <dd className="numeric">{selected.stats.totalCommissions.toLocaleString("ar-SA")} ر.س</dd>
+                  </div>
+                  <div>
+                    <dt>البلاغات</dt>
+                    <dd className="numeric">{selected.stats.totalReports.toLocaleString("ar-SA")}</dd>
+                  </div>
+                </>
+              )}
+              <div>
+                <dt>الأجهزة النشطة</dt>
+                <dd className="numeric">{selected.devices?.length ?? 0}</dd>
+              </div>
+            </dl>
+
+            {Boolean(actionError) && (
+              <div className="alert-box danger" role="alert">
+                <Info aria-hidden="true" size={18} />
+                <div>
+                  <strong>تعذر إكمال العملية</strong>
+                  <p>{errorMessage(actionError)}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="decision-actions">
+              {selected.isBanned ? (
+                <AuthorizedButton
+                  resource="users"
+                  action="ban"
+                  className="button success-button"
+                  type="button"
+                  disabled={pending}
+                  onClick={() => openUnban(selected)}
+                >
+                  <Unlock size={17} />
+                  إلغاء الحظر
+                </AuthorizedButton>
+              ) : (
+                <AuthorizedButton
+                  resource="users"
+                  action="ban"
+                  className="button danger-button"
+                  type="button"
+                  disabled={pending || isSelfAdmin(selected)}
+                  onClick={() => openBan(selected)}
+                  title={isSelfAdmin(selected) ? "لا يمكن للمشرف حظر حسابه الخاص" : undefined}
+                  aria-label={isSelfAdmin(selected) ? "لا يمكن للمشرف حظر حسابه الخاص" : "حظر المستخدم"}
+                >
+                  <Ban size={17} />
+                  حظر المستخدم
+                </AuthorizedButton>
+              )}
+            </div>
+            {isSelfAdmin(selected) && (
+              <p className="block-copy text-muted" style={{ textAlign: "center", margin: 0 }}>
+                حساب المشرف الحالي (محمي من الحظر الذاتي)
+              </p>
+            )}
+          </div>
+        )}
+      </Drawer>
+
+      <FormDialog
+        open={Boolean(banTarget)}
+        title={`حظر حساب المستخدم: ${banTarget?.fullName ?? ""}`}
+        dirty={banForm.formState.isDirty}
+        submitting={pending}
+        onClose={() => {
+          setBanTarget(null);
+          banForm.reset();
+        }}
+      >
+        {(requestClose) => (
+          <ValidatedForm
+            className="validated-form"
+            onSubmit={banForm.handleSubmit((values) => {
+              void handleBan(values);
+            })}
+          >
+            <div className="alert-box danger">
+              <Ban size={18} />
+              <p>سيتم إنهاء جميع جلسات المستخدم وإبطال رموز الدخول والوصول فورياً من الخادم.</p>
+            </div>
+            <TextareaField
+              label="سبب الحظر"
+              rows={4}
+              placeholder="اكتب سبباً واضحاً ومفصلاً للحظر ليُحفظ في سجل التدقيق (3 أحرف على الأقل)"
+              error={banForm.formState.errors.reason?.message}
+              {...banForm.register("reason")}
+            />
+            <div className="modal-actions">
+              <button className="button secondary" type="button" disabled={pending} onClick={requestClose}>
+                إلغاء
+              </button>
+              <SubmitButton className="button danger-button" pending={pending} pendingLabel="جارٍ حظر الحساب…">
+                تأكيد الحظر
+              </SubmitButton>
+            </div>
+          </ValidatedForm>
+        )}
+      </FormDialog>
+
+      <Modal
+        open={Boolean(unbanTarget)}
+        title="إلغاء حظر المستخدم"
+        onClose={() => {
+          if (!pending) setUnbanTarget(null);
+        }}
+      >
+        <div className="form-confirmation">
+          <span className="form-confirmation-icon">
+            <Unlock aria-hidden="true" size={22} />
+          </span>
+          <p>
+            هل أنت متأكد من رغبتك في إلغاء حظر حساب «<strong>{unbanTarget?.fullName}</strong>»؟
+            سيتمكن المستخدم من تسجيل الدخول واستئناف استخدام المنصة فوراً.
+          </p>
+          <div className="modal-actions">
+            <button
+              className="button secondary"
+              type="button"
+              disabled={pending}
+              onClick={() => setUnbanTarget(null)}
+            >
+              إلغاء
+            </button>
+            <AuthorizedButton
+              resource="users"
+              action="ban"
+              className="button success-button"
+              type="button"
+              disabled={pending}
+              aria-busy={pending}
+              onClick={() => {
+                void handleUnban();
+              }}
+            >
+              {pending ? "جارٍ إلغاء الحظر…" : "تأكيد إلغاء الحظر"}
+            </AuthorizedButton>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
