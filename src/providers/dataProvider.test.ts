@@ -177,6 +177,16 @@ describe("list semantics and failure boundaries", () => {
     await expect(provider.update({ resource: "categories", id: 1, variables: { name: "تعديل" } })).rejects.toMatchObject({ status, statusCode: status });
   });
 
+  it("updates user ban status via dataProvider and delegates to users.ban", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ success: true, message: "User ban status updated" }));
+    const { provider } = remote(fetcher);
+    const result = await provider.update({ resource: "users", id: 201, variables: { isBanned: true, reason: "مخالفة الشروط" } });
+    expect(result.data).toMatchObject({ id: 201, message: "User ban status updated" });
+    expect(fetcher.mock.calls[0][0]).toBe("https://api.example.test/api/v1/admin/users/201/ban");
+    expect(fetcher.mock.calls[0][1]?.method).toBe("PATCH");
+    expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ is_banned: true, ban_reason: "مخالفة الشروط" });
+  });
+
   it("normalizes malformed payloads without silently treating them as empty lists", async () => {
     const { provider } = remote(vi.fn<typeof fetch>().mockResolvedValue(Response.json({ success: true, data: [{ id: 1 }] })));
     await expect(provider.getList({ resource: "categories" })).rejects.toMatchObject({ kind: "invalid_response" });

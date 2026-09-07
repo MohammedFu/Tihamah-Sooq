@@ -371,7 +371,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T19 - Complete user management
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T03-T05, T10, T13-T15
 - **Objective:** Search and inspect users and safely ban or restore accounts.
@@ -380,6 +380,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/users/api/*`, components, schemas, `UsersPage.tsx`.
 - **Acceptance:** Ban reason is persisted; current administrator cannot accidentally ban themselves if the backend identifies that case; phone data follows masking permissions.
 - **Verification:** Service tests plus ban/unban end-to-end tests.
+- **Completion note (2026-09-08):** Integrated Refine server pagination and search for `GET /api/v1/admin/users` with status filtering (all/active/banned) and preloaded region/village display. Added `userBanSchema` validation requiring non-empty ban reasons (3–500 chars), unban confirmation modal, and explicit user session revocation feedback upon banning. Protected the authenticated administrator from self-banning across table and drawer controls using `useGetIdentity()`. Updated `dataProvider` to route `users` resource updates through `services.users.ban`. Unit tests, schema tests, page integration tests, and production build passed.
 
 ### T20 - Complete commission auditing
 

@@ -1,5 +1,5 @@
 import type { BaseRecord, DataProvider, GetListParams } from "@refinedev/core";
-import type { AdminServices, CatalogService, ListFilter, ListOptions, ListSort, ModerationInput } from "../services/admin/contracts";
+import type { AdminServices, BanInput, CatalogService, ListFilter, ListOptions, ListSort, ModerationInput } from "../services/admin/contracts";
 import { entityId, invalidInput, unsupportedContract } from "../services/admin/validation";
 import { ApiError } from "../services/http";
 
@@ -64,6 +64,10 @@ export function createAdminDataProvider(services: AdminServices, apiUrl: string)
     async update({ resource, id, variables, meta }) {
       if (resource === "listings") {
         const result = await services.listings.moderate(numericId(id), variables as ModerationInput, context(meta));
+        return { data: refineRecord({ id: numericId(id), ...result }) };
+      }
+      if (resource === "users") {
+        const result = await services.users.ban(numericId(id), variables as BanInput, context(meta));
         return { data: refineRecord({ id: numericId(id), ...result }) };
       }
       return { data: refineRecord(await catalog(resource).update(numericId(id), variables, context(meta))) };
