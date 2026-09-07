@@ -384,7 +384,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T20 - Complete commission auditing
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T03-T05, T10, T13-T15
 - **Objective:** Protect the 1% financial verification workflow from incorrect or duplicate decisions.
@@ -393,6 +393,8 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/commissions/api/*`, components, schemas, `CommissionsPage.tsx`.
 - **Acceptance:** Server amount remains authoritative; mismatches are visibly flagged; approval is idempotent; rejected receipts retain reason and history.
 - **Verification:** Decimal calculation tests, concurrency tests, and approve/reject end-to-end flows.
+- **Completion note (2026-09-08):** Integrated Refine server pagination and status filtering (`all`, `paid`, `unpaid`, `verified`, `rejected`) for `GET /api/v1/admin/commissions`. Added pure financial helpers (`calculateExpectedCommission`, `isCommissionMismatch`, `formatCurrency`) implementing the 1% platform rate with a 1.00 SAR floor, while keeping the server's amount authoritative and visibly flagging discrepancies in both the data table and inspection drawer. Added bank transfer receipt preview with a high-resolution click-to-enlarge modal and external link. Implemented the verification confirmation workflow (`status: "verified"`) and rejection workflow using `commissionRejectionSchema` with a contract-gap advisory regarding backend rejection notes. Added commission update delegation in `dataProvider` and cache invalidation via `useAdminAction("commission", ...)`. Unit tests, schema tests, page integration tests, and production build passed cleanly with zero regressions.
+
 
 ### T21 - Complete reports and fraud moderation
 

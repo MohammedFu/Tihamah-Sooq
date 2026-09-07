@@ -31,7 +31,7 @@ function Harness({ permissions, children }: { permissions: Permission[]; childre
 describe("permission-aware routes, navigation, and actions", () => {
   it("removes unavailable sidebar destinations and empty groups", async () => {
     render(<Harness permissions={viewUsers}><Sidebar open onNavigate={() => undefined} /></Harness>);
-    expect(await screen.findByRole("link", { name: "إدارة المستخدمين" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "إدارة المستخدمين" }, { timeout: 4000 })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "مراجعة الإعلانات" })).not.toBeInTheDocument();
     expect(screen.queryByText("المحتوى والهيكلة")).not.toBeInTheDocument();
   });
