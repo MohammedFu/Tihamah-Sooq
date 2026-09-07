@@ -1,90 +1,190 @@
-import { Check, Eye, Pause, Play, Search, Trash2, Video, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { Drawer } from "../../../components/ui/Drawer";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Check, Eye, ImageOff, Info, Pause, Play, Search, Trash2, Video, X } from "lucide-react";
+import { useDeferredValue, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../components/ui/DataTable";
+import { Drawer } from "../../../components/ui/Drawer";
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
-import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
-import { initialListings, type Listing, type ListingStatus } from "../../../data/adminFixtures";
+import { FormDialog, SelectField, SubmitButton, TextareaField, ValidatedForm } from "../../../components/ui/forms";
 import { useAdminNotification } from "../../../providers/notificationStore";
+import { isApiError } from "../../../services/http";
+import type { Listing, ListingMedia, ListingStatus } from "../../../types/domain";
+import { useListings } from "../api/useListings";
+import { listingRejectionSchema, type ListingRejectionValues } from "../schemas/listingModerationSchema";
 
-const filters: Array<{ label: string; value: "all" | ListingStatus }> = [
-  { label: "الكل", value: "all" }, { label: "قيد المراجعة", value: "pending_review" }, { label: "نشط", value: "active" }, { label: "تم البيع", value: "sold" }, { label: "مرفوض", value: "rejected" },
+const statusFilters: Array<{ label: string; value: ListingStatus }> = [
+  { label: "قيد المراجعة", value: "pending_review" },
+  { label: "نشط", value: "active" },
+  { label: "تم البيع", value: "sold" },
+  { label: "مرفوض", value: "rejected" },
 ];
+const moneyFormatter = new Intl.NumberFormat("ar-SA", { style: "currency", currency: "SAR", maximumFractionDigits: 2 });
+const dateFormatter = new Intl.DateTimeFormat("ar-SA", { dateStyle: "medium", timeStyle: "short" });
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "غير متاح" : dateFormatter.format(date);
+}
+
+function primaryImage(listing: Listing) {
+  return [...listing.media].sort((left, right) => Number(right.isPrimary) - Number(left.isPrimary)).find((item) => item.type === "image") ?? null;
+}
+
+function ListingThumbnail({ listing }: { listing: Listing }) {
+  const media = primaryImage(listing);
+  const [failed, setFailed] = useState(false);
+  if (!media || failed) return <span className="record-media-fallback" aria-hidden="true"><ImageOff size={18} /></span>;
+  return <img src={media.url} alt="" onError={() => setFailed(true)} />;
+}
 
 function listingColumns(onSelect: (listing: Listing) => void): DataTableColumn<Listing>[] {
   return [
-    { id: "listing", header: "الإعلان", cell: (listing) => <div className="record-primary"><img src={listing.image} alt="" /><span><strong>{listing.title}</strong><small>#{listing.id} · {listing.createdAt}</small></span></div> },
-    { id: "seller", header: "المعلن", cell: (listing) => <><strong>{listing.seller}</strong><small className="block-copy" dir="ltr">{listing.phone}</small></> },
-    { id: "location", header: "القسم والموقع", cell: (listing) => <>{listing.category}<small className="block-copy">{listing.village}، {listing.region}</small></> },
-    { id: "price", header: "السعر", sortable: true, className: "numeric", cell: (listing) => <>{listing.price.toLocaleString("ar-SA")} ر.س</> },
-    { id: "views", header: "المشاهدات", sortable: true, className: "numeric", cell: (listing) => listing.views.toLocaleString("ar-SA") },
+    { id: "listing", header: "الإعلان", cell: (listing) => <div className="record-primary"><ListingThumbnail key={primaryImage(listing)?.url} listing={listing} /><span><strong>{listing.title}</strong><small><bdi dir="ltr">#{listing.id}</bdi> · {formatDate(listing.createdAt)}</small></span></div> },
+    { id: "seller", header: "المعلن", cell: (listing) => <><strong>{listing.seller?.fullName ?? "معلن غير متاح"}</strong><small className="block-copy" dir="ltr">{listing.seller?.phone ?? "—"}</small></> },
+    { id: "location", header: "القسم والموقع", cell: (listing) => <>{listing.category?.name ?? "قسم غير متاح"}<small className="block-copy">{listing.village?.name ?? "قرية غير متاحة"}، {listing.region?.name ?? "منطقة غير متاحة"}</small></> },
+    { id: "price", header: "السعر", sortable: true, className: "numeric", cell: (listing) => moneyFormatter.format(listing.price) },
+    { id: "views", header: "المشاهدات", className: "numeric", cell: (listing) => listing.viewCount === null ? "غير متاح" : listing.viewCount.toLocaleString("ar-SA") },
     { id: "status", header: "الحالة", cell: (listing) => <StatusBadge value={listing.status} /> },
-    { id: "action", header: "الإجراء", cell: (listing) => <AuthorizedButton resource="listings" action="show" className="icon-button table-action" type="button" onClick={() => onSelect(listing)} aria-label="عرض التفاصيل" title="عرض التفاصيل"><Eye size={17} /></AuthorizedButton> },
+    { id: "action", header: "الإجراء", cell: (listing) => <AuthorizedButton resource="listings" action="show" className="icon-button table-action" type="button" onClick={() => onSelect(listing)} aria-label={`عرض تفاصيل الإعلان ${listing.id}`} title="عرض التفاصيل"><Eye aria-hidden="true" size={17} /></AuthorizedButton> },
   ];
 }
 
+function MediaItem({ media, title }: { media: ListingMedia; title: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <div className="media-fallback" role="status"><ImageOff aria-hidden="true" size={24} /><span>تعذر تحميل {media.type === "video" ? "الفيديو" : "الصورة"}.</span></div>;
+  if (media.type === "video") return <video controls preload="metadata" aria-label={`فيديو الإعلان: ${title}`} onError={() => setFailed(true)}><source src={media.url} /></video>;
+  return <img src={media.url} alt={`صورة الإعلان: ${title}`} onError={() => setFailed(true)} />;
+}
+
+function ListingMediaGallery({ listing }: { listing: Listing }) {
+  const media = [...listing.media].sort((left, right) => Number(right.isPrimary) - Number(left.isPrimary));
+  if (!media.length) return <div className="media-fallback" role="status"><ImageOff aria-hidden="true" size={24} /><span>لا توجد وسائط مرفقة بهذا الإعلان.</span></div>;
+  return <div className="listing-media-gallery">{media.map((item) => <figure key={item.id}><MediaItem media={item} title={listing.title} />{item.type === "video" && <figcaption><Video aria-hidden="true" size={15} /> فيديو الإعلان</figcaption>}</figure>)}</div>;
+}
+
+function errorMessage(error: unknown) {
+  return isApiError(error) ? error.userMessage : "تعذر حفظ القرار. حدّث البيانات وحاول مجدداً.";
+}
+
 export function ListingsPage() {
-  const [listings, setListings] = useState(initialListings);
-  const table = useDataTableUrlState<"status">({ filters: [{ name: "status", defaultValue: "all", values: filters.map((filter) => filter.value) }], sortableFields: ["price", "views"], defaultPageSize: 10, pageSizeOptions: [10, 20, 50] });
-  const status = table.filters.status as "all" | ListingStatus;
+  const table = useDataTableUrlState<"status">({ filters: [{ name: "status", defaultValue: "pending_review", values: statusFilters.map((filter) => filter.value) }], sortableFields: ["price"], defaultPageSize: 10, pageSizeOptions: [10, 20, 50] });
+  const status = table.filters.status as ListingStatus;
+  const deferredSearch = useDeferredValue(table.search);
+  const api = useListings({ page: table.page, pageSize: table.pageSize, status, search: deferredSearch, sort: table.sort });
   const [selected, setSelected] = useState<Listing | null>(null);
   const [rejecting, setRejecting] = useState<Listing | null>(null);
-  const [reason, setReason] = useState("");
+  const [deleting, setDeleting] = useState<Listing | null>(null);
+  const [actionError, setActionError] = useState<unknown>(null);
   const notification = useAdminNotification();
+  const rejectionForm = useForm<ListingRejectionValues>({ resolver: zodResolver(listingRejectionSchema), defaultValues: { reason: "", notes: "" } });
+  const rows = api.list.result.data;
+  const total = api.list.result.total ?? 0;
+  const pending = api.update.mutation.isPending || api.remove.mutation.isPending;
+  const columns = useMemo(() => listingColumns((listing) => { setSelected(listing); setActionError(null); }), []);
 
-  const visible = useMemo(() => listings.filter((listing) => {
-    const matchesStatus = status === "all" || listing.status === status;
-    const text = `${listing.title} ${listing.seller} ${listing.phone} ${listing.village}`.toLowerCase();
-    return matchesStatus && text.includes(table.search.toLowerCase());
-  }).sort((left, right) => table.sort ? (left[table.sort.field as "price" | "views"] - right[table.sort.field as "price" | "views"]) * (table.sort.order === "asc" ? 1 : -1) : right.id - left.id), [listings, status, table.search, table.sort]);
-  const totalPages = Math.max(1, Math.ceil(visible.length / table.pageSize));
-  const page = Math.min(table.page, totalPages);
-  const rows = visible.slice((page - 1) * table.pageSize, page * table.pageSize);
-  const columns = useMemo(() => listingColumns(setSelected), []);
-  useEffect(() => { if (table.page > totalPages) table.setPage(totalPages); }, [table.page, totalPages]);
-
-  function updateStatus(id: number, nextStatus: ListingStatus, message: string) {
-    setListings((items) => items.map((item) => item.id === id ? { ...item, status: nextStatus } : item));
-    setSelected((item) => item?.id === id ? { ...item, status: nextStatus } : item);
-    notification.success(message);
+  async function moderate(listing: Listing, nextStatus: "active" | "rejected", reason?: string) {
+    setActionError(null);
+    try {
+      await notification.trackPromise(
+        () => api.moderate(listing.id, { status: nextStatus, ...(reason ? { reason } : {}) }),
+        {
+          key: `listing-${listing.id}-status`,
+          progress: "جارٍ حفظ قرار مراجعة الإعلان…",
+          success: nextStatus === "active" ? "تم اعتماد حالة الإعلان بعد تأكيد الخادم." : "تم رفض الإعلان؛ سبب القرار غير محفوظ لأن العقد الحالي لا يقبله.",
+          error: errorMessage,
+        },
+      );
+      setSelected((current) => current?.id === listing.id ? { ...current, status: nextStatus } : current);
+      setRejecting(null);
+      rejectionForm.reset();
+    } catch (error) {
+      setActionError(error);
+    }
   }
 
-  function reject() {
-    if (!rejecting || !reason.trim()) return;
-    updateStatus(rejecting.id, "rejected", "تم رفض الإعلان وإرسال السبب للمعلن");
-    setRejecting(null); setReason("");
+  function openRejection(listing: Listing) {
+    rejectionForm.reset({ reason: "", notes: "" });
+    setRejecting(listing);
   }
 
-  function removeListing(listing: Listing) {
-    if (!window.confirm(`حذف الإعلان #${listing.id} نهائياً؟`)) return;
-    setListings((items) => items.filter((item) => item.id !== listing.id));
-    setSelected(null); notification.success("تم حذف الإعلان من قائمة الإدارة");
+  async function reject(values: ListingRejectionValues) {
+    if (!rejecting) return;
+    const localReason = values.notes ? `${values.reason}: ${values.notes}` : values.reason;
+    await moderate(rejecting, "rejected", localReason);
+  }
+
+  async function deleteListing() {
+    if (!deleting) return;
+    setActionError(null);
+    try {
+      await notification.trackPromise(
+        () => api.delete(deleting.id),
+        { key: `listing-${deleting.id}-delete`, progress: "جارٍ إخفاء الإعلان…", success: "تم إخفاء الإعلان بعد تأكيد الخادم.", error: errorMessage },
+      );
+      setDeleting(null);
+      setSelected(null);
+    } catch (error) {
+      setActionError(error);
+    }
   }
 
   return (
     <>
-      <PageHeader title="مراجعة الإعلانات" description="مراقبة المحتوى واعتماد أو رفض الإعلانات قبل ظهورها في تطبيق الموبايل." />
+      <PageHeader title="مراجعة الإعلانات" description="مراجعة تفاصيل الإعلانات ووسائطها، ثم اعتماد الحالة المؤكدة من الخادم." />
       <section className="card data-surface">
-        <div className="tabs-row">{filters.map((filter) => <button className={`tab-button ${status === filter.value ? "active" : ""}`} type="button" key={filter.value} onClick={() => table.setFilter("status", filter.value)}>{filter.label}<span>{filter.value === "all" ? listings.length : listings.filter((item) => item.status === filter.value).length}</span></button>)}</div>
-        <DataTable caption="قائمة الإعلانات الإدارية" columns={columns} rows={rows} rowKey={(listing) => listing.id} sort={table.sort} onSortChange={table.setSort} emptyMessage="لا توجد إعلانات مطابقة للفلاتر الحالية." pagination={{ page, pageSize: table.pageSize, total: visible.length, pageSizeOptions: table.pageSizeOptions }} onPageChange={table.setPage} onPageSizeChange={table.setPageSize} toolbar={<div className="filters-row"><label className="field-with-icon"><Search size={16} /><input value={table.search} onChange={(event) => table.setSearch(event.target.value)} placeholder="بحث بالعنوان أو المعلن أو رقم الجوال" aria-label="البحث في الإعلانات" /></label><span className="record-count">{visible.length} إعلان</span></div>} />
+        <div className="tabs-row" role="group" aria-label="تصفية الإعلانات حسب الحالة">{statusFilters.map((filter) => <button className={`tab-button ${status === filter.value ? "active" : ""}`} type="button" key={filter.value} aria-pressed={status === filter.value} onClick={() => table.setFilter("status", filter.value)}>{filter.label}</button>)}</div>
+        <p className="contract-note listing-contract-note"><Info aria-hidden="true" size={15} />يعرض الخادم حالة واحدة في كل مرة؛ لا يوفر عقده الحالي تجميع «كل الحالات» في طلب موثوق.</p>
+        <DataTable
+          caption="قائمة الإعلانات الإدارية"
+          columns={columns}
+          rows={rows}
+          rowKey={(listing) => listing.id}
+          loading={api.list.query.isPending}
+          error={api.list.query.isError ? api.list.query.error : undefined}
+          onRetry={() => { void api.list.query.refetch(); }}
+          retrying={api.list.query.isFetching}
+          sort={table.sort}
+          onSortChange={table.setSort}
+          emptyMessage="لا توجد إعلانات مطابقة للحالة والبحث الحاليين."
+          pagination={{ page: table.page, pageSize: table.pageSize, total, pageSizeOptions: table.pageSizeOptions }}
+          onPageChange={table.setPage}
+          onPageSizeChange={table.setPageSize}
+          toolbar={<div className="filters-row"><label className="field-with-icon"><Search aria-hidden="true" size={16} /><input value={table.search} onChange={(event) => table.setSearch(event.target.value)} placeholder="بحث بعنوان الإعلان أو وصفه" aria-label="البحث في الإعلانات" /></label><span className="record-count">{total.toLocaleString("ar-SA")} إعلان</span></div>}
+        />
       </section>
 
-      <Drawer open={Boolean(selected)} title={selected ? `الإعلان #${selected.id}` : ""} onClose={() => setSelected(null)}>
+      <Drawer open={Boolean(selected)} title={selected ? `الإعلان #${selected.id}` : ""} onClose={() => { if (!pending) setSelected(null); }}>
         {selected && <div className="detail-stack">
-          <div className="media-preview"><img src={selected.image} alt={selected.title} />{selected.hasVideo && <button type="button"><Video size={18} /> تشغيل الفيديو المضغوط</button>}</div>
+          <ListingMediaGallery listing={selected} />
           <div><div className="detail-title-row"><h3>{selected.title}</h3><StatusBadge value={selected.status} /></div><p className="muted">{selected.description}</p></div>
-          <dl className="detail-grid"><div><dt>السعر</dt><dd>{selected.price.toLocaleString("ar-SA")} ر.س</dd></div><div><dt>القسم</dt><dd>{selected.category}</dd></div><div><dt>المعلن</dt><dd>{selected.seller}</dd></div><div><dt>الجوال</dt><dd dir="ltr">{selected.phone}</dd></div><div><dt>الموقع</dt><dd>{selected.village}، {selected.region}</dd></div><div><dt>المشاهدات</dt><dd>{selected.views}</dd></div></dl>
+          <dl className="detail-grid"><div><dt>السعر</dt><dd>{moneyFormatter.format(selected.price)}</dd></div><div><dt>القسم</dt><dd>{selected.category?.name ?? "غير متاح"}</dd></div><div><dt>المعلن</dt><dd>{selected.seller?.fullName ?? "غير متاح"}</dd></div><div><dt>الجوال</dt><dd dir="ltr">{selected.seller?.phone ?? "—"}</dd></div><div><dt>الموقع</dt><dd>{selected.village?.name ?? "قرية غير متاحة"}، {selected.region?.name ?? "منطقة غير متاحة"}</dd></div><div><dt>المشاهدات</dt><dd>{selected.viewCount === null ? "غير متاح" : selected.viewCount.toLocaleString("ar-SA")}</dd></div><div><dt>تاريخ النشر</dt><dd>{formatDate(selected.createdAt)}</dd></div><div><dt>آخر تحديث</dt><dd>{selected.updatedAt ? formatDate(selected.updatedAt) : "غير متاح"}</dd></div></dl>
+          {Boolean(actionError) && <div className="alert-box danger" role="alert"><Info aria-hidden="true" size={18} /><p><strong>لم يُحفظ القرار</strong>{errorMessage(actionError)}</p></div>}
           <div className="decision-actions">
-            {selected.status === "pending_review" && <><AuthorizedButton resource="listings" action="approve" className="button success-button" type="button" onClick={() => updateStatus(selected.id, "active", "تم اعتماد الإعلان وإرساله للنشر")}><Check size={17} />اعتماد الإعلان</AuthorizedButton><AuthorizedButton resource="listings" action="reject" className="button danger-outline" type="button" onClick={() => setRejecting(selected)}><X size={17} />رفض الإعلان</AuthorizedButton></>}
-            {selected.status === "active" && <AuthorizedButton resource="listings" action="edit" className="button secondary" type="button" onClick={() => updateStatus(selected.id, "rejected", "تم إلغاء تنشيط الإعلان")}><Pause size={17} />إلغاء التنشيط</AuthorizedButton>}
-            {selected.status === "rejected" && <AuthorizedButton resource="listings" action="edit" className="button secondary" type="button" onClick={() => updateStatus(selected.id, "active", "تمت إعادة تنشيط الإعلان")}><Play size={17} />إعادة التنشيط</AuthorizedButton>}
-            <AuthorizedButton resource="listings" action="delete" className="button danger-ghost" type="button" onClick={() => removeListing(selected)}><Trash2 size={17} />حذف نهائي</AuthorizedButton>
+            {selected.status === "pending_review" && <><AuthorizedButton resource="listings" action="approve" className="button success-button" type="button" disabled={pending} aria-busy={pending} onClick={() => { void moderate(selected, "active"); }}><Check aria-hidden="true" size={17} />اعتماد الإعلان</AuthorizedButton><AuthorizedButton resource="listings" action="reject" className="button danger-outline" type="button" disabled={pending} onClick={() => openRejection(selected)}><X aria-hidden="true" size={17} />رفض الإعلان</AuthorizedButton></>}
+            {selected.status === "active" && <AuthorizedButton resource="listings" action="reject" className="button secondary" type="button" disabled={pending} onClick={() => openRejection(selected)}><Pause aria-hidden="true" size={17} />رفض وإيقاف الإعلان</AuthorizedButton>}
+            {selected.status === "rejected" && <AuthorizedButton resource="listings" action="approve" className="button secondary" type="button" disabled={pending} aria-busy={pending} onClick={() => { void moderate(selected, "active"); }}><Play aria-hidden="true" size={17} />إعادة تنشيط الإعلان</AuthorizedButton>}
+            <AuthorizedButton resource="listings" action="delete" className="button danger-ghost" type="button" disabled={pending} onClick={() => setDeleting(selected)}><Trash2 aria-hidden="true" size={17} />إخفاء الإعلان</AuthorizedButton>
           </div>
         </div>}
       </Drawer>
-      <Modal open={Boolean(rejecting)} title="رفض الإعلان" onClose={() => setRejecting(null)}><label className="form-field"><span>سبب الرفض</span><select value={reason} onChange={(event) => setReason(event.target.value)}><option value="">اختر سبباً</option><option>سلعة ممنوعة</option><option>صور غير لائقة</option><option>سعر وهمي</option><option>بيانات الإعلان غير مكتملة</option></select></label><label className="form-field"><span>ملاحظات إضافية</span><textarea rows={4} placeholder="ستظهر هذه الملاحظات للمعلن" /></label><div className="modal-actions"><button className="button secondary" type="button" onClick={() => setRejecting(null)}>إلغاء</button><AuthorizedButton resource="listings" action="reject" className="button danger-button" type="button" disabled={!reason} onClick={reject}>رفض وإشعار المعلن</AuthorizedButton></div></Modal>
+
+      <FormDialog open={Boolean(rejecting)} title="رفض أو إيقاف الإعلان" dirty={rejectionForm.formState.isDirty} submitting={pending} onClose={() => { setRejecting(null); rejectionForm.reset(); }}>
+        {(requestClose) => <ValidatedForm className="validated-form" onSubmit={rejectionForm.handleSubmit((values) => { void reject(values); })}>
+          <SelectField label="سبب القرار" error={rejectionForm.formState.errors.reason?.message} {...rejectionForm.register("reason")}>
+            <option value="">اختر سبباً</option><option value="سلعة ممنوعة">سلعة ممنوعة</option><option value="صور غير لائقة">صور غير لائقة</option><option value="سعر وهمي">سعر وهمي</option><option value="بيانات الإعلان غير مكتملة">بيانات الإعلان غير مكتملة</option>
+          </SelectField>
+          <TextareaField label="ملاحظات إضافية" rows={4} placeholder="ملاحظات فريق المراجعة" error={rejectionForm.formState.errors.notes?.message} {...rejectionForm.register("notes")} />
+          <div className="alert-box"><Info aria-hidden="true" size={18} /><p><strong>فجوة في عقد الخادم</strong>سبب القرار مطلوب للتأكيد هنا، لكن واجهة الخادم الحالية تقبل الحالة فقط؛ لن تدّعي اللوحة حفظ السبب أو إرساله للمعلن.</p></div>
+          <div className="modal-actions"><button className="button secondary" type="button" disabled={pending} onClick={requestClose}>إلغاء</button><SubmitButton className="button danger-button" pending={pending} pendingLabel="جارٍ حفظ القرار…">تأكيد الرفض</SubmitButton></div>
+        </ValidatedForm>}
+      </FormDialog>
+
+      <Modal open={Boolean(deleting)} title="إخفاء الإعلان" onClose={() => { if (!pending) setDeleting(null); }}>
+        <div className="form-confirmation"><span className="form-confirmation-icon"><Trash2 aria-hidden="true" size={22} /></span><p>سيُحذف الإعلان حذفاً لطيفاً ويختفي من القوائم العامة. لا يؤكد العقد الحالي إمكانية استعادته من لوحة التحكم.</p><div className="modal-actions"><button className="button secondary" type="button" disabled={pending} onClick={() => setDeleting(null)}>إلغاء</button><AuthorizedButton resource="listings" action="delete" className="button danger-button" type="button" disabled={pending} aria-busy={pending} onClick={() => { void deleteListing(); }}>{pending ? "جارٍ الإخفاء…" : "تأكيد الإخفاء"}</AuthorizedButton></div></div>
+      </Modal>
     </>
   );
 }

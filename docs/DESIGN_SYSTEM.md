@@ -6,7 +6,7 @@ The visual source of truth is the one-page mobile library at `D:\dashboard\Noteb
 
 - Typography: self-hosted **Tajawal** in weights 400, 500, 700, and 800. Arabic and Latin text both use Tajawal; Arial is only a last-resort fallback.
 - Source palette: Rural BG `#F9FAFB`, Rural Gold `#F59E0B`, Rural Amber `#D97706`, Rural Green `#2D6A4F`, and Rural Dark `#1B4332`.
-- Primary actions use Rural Amber. Navigation, identity, secondary actions, headings, and informational states use Rural Green/Dark.
+- Rural Gold and Rural Amber remain the source accent colors for decorative highlights. Interactive text, primary-action fills, and focus indicators use a darker derived amber so small Arabic labels and white button text meet WCAG AA contrast. Navigation, identity, secondary actions, headings, and informational states use Rural Green/Dark.
 - Status colors retain accessible danger and warning semantics. Their backgrounds are deliberately pale so status never depends on color intensity alone.
 - The interface remains RTL. IDs, request references, phone numbers, and other machine-oriented values opt into LTR with `dir`/`bdi` at component level.
 
@@ -22,7 +22,7 @@ The PDF supplies buttons, icon controls, inputs, selects, cards/media, chips, li
 - drawers and modal confirmations;
 - status badges, audit metadata, notices, and authentication/error states.
 
-Desktop components use the same palette, Tajawal type hierarchy, rounded controls, quiet borders, and restrained elevation. Cards use the shared 12 px PDF-derived radius; nested controls use 6–10 px radii. Focus is a visible Rural Gold ring, keyboard interactions never rely on hover, and reduced-motion preferences disable nonessential transitions and animations.
+Desktop components use the same palette, Tajawal type hierarchy, rounded controls, quiet borders, and restrained elevation. Cards use the shared 12 px PDF-derived radius; nested controls use 6–10 px radii. Focus uses a clearly visible derived-amber ring, keyboard interactions never rely on hover, and reduced-motion preferences disable nonessential transitions and animations.
 
 ## Contribution rules
 

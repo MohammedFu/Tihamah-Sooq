@@ -36,10 +36,45 @@ describe("explicit admin operations", () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it("uses the executable admin ads routes, server query names, status-only body, and soft delete", async () => {
+    const listing = createAdminFixtureData().listings[0];
+    const { fetcher, services } = setup();
+    fetcher.mockResolvedValueOnce(Response.json({ success: true, data: [listing], pagination: { page: 2, limit: 10, total_rows: 21, total_pages: 3 } }));
+
+    const result = await services.listings.list({
+      page: 2,
+      pageSize: 10,
+      filters: [
+        { field: "status", operator: "eq", value: "pending_review" },
+        { field: "q", operator: "contains", value: "أغنام +" },
+        { field: "categoryId", operator: "eq", value: 2 },
+        { field: "minPrice", operator: "eq", value: 100 },
+      ],
+      sorters: [{ field: "price", order: "desc" }],
+    });
+    expect(result.pagination).toEqual({ page: 2, pageSize: 10, totalItems: 21, totalPages: 3 });
+    expect(result.items[0]).toMatchObject({ id: 1048, status: "pending_review", media: [{ type: "image" }, { type: "video" }] });
+    const listUrl = new URL(String(fetcher.mock.calls[0][0]), "https://example.test");
+    expect(listUrl.pathname).toBe("/api/v1/admin/ads");
+    expect(Object.fromEntries(listUrl.searchParams)).toMatchObject({ page: "2", limit: "10", status: "pending_review", q: "أغنام +", category_id: "2", min_price: "100", sort: "price_desc" });
+
+    fetcher.mockResolvedValueOnce(Response.json({ success: true, message: "updated" }));
+    expect(await services.listings.moderate(1048, { status: "rejected", reason: "سلعة ممنوعة" })).toEqual({ message: "updated" });
+    expect(fetcher.mock.calls[1][0]).toBe("/api/v1/admin/ads/1048/status");
+    expect(fetcher.mock.calls[1][1]?.method).toBe("PATCH");
+    expect(JSON.parse(String(fetcher.mock.calls[1][1]?.body))).toEqual({ status: "rejected" });
+
+    fetcher.mockResolvedValueOnce(Response.json({ success: true, message: "hidden" }));
+    expect(await services.listings.delete(1048)).toEqual({ message: "hidden" });
+    expect(fetcher.mock.calls[2][0]).toBe("/api/v1/admin/ads/1048");
+    expect(fetcher.mock.calls[2][1]?.method).toBe("DELETE");
+  });
+
   it("keeps missing contracts closed and requires reasons before network activity", async () => {
     const { fetcher, services } = setup();
     await expect(services.listings.list()).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
-    await expect(services.listings.moderate(1, { status: "removed", reason: "مخالفة" })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
+    await expect(services.listings.moderate(1, { status: "rejected", reason: " " })).rejects.toMatchObject({ kind: "validation" });
+    await expect(services.listings.moderate(1, { status: "active", reason: "حقل غير مدعوم" })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
     await expect(services.audit.list()).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
     await expect(services.broadcasts.send({ title: "تنبيه", body: "نص", audience: "region", targetId: 1 })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
     await expect(services.users.ban(201, { isBanned: true, reason: " " })).rejects.toMatchObject({ kind: "validation" });
@@ -80,8 +115,8 @@ describe("explicit admin operations", () => {
     const audit = await services.audit.list();
     await services.listings.moderate(1048, { status: "active" });
     expect((await services.statistics.get()).activeListings).toBe(1);
-    await services.listings.moderate(1048, { status: "removed", reason: "مخالفة" });
-    expect((await services.listings.list()).items).toEqual([]);
+    await services.listings.delete(1048);
+    expect((await services.listings.list({ filters: [{ field: "status", operator: "eq", value: "active" }] })).items).toEqual([]);
     expect(await services.audit.list()).toEqual(audit);
     expect((await createFixtureAdminServices().commissions.list()).items[0].status).toBe("paid");
   });

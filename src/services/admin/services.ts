@@ -1,9 +1,9 @@
-import type { ApiBanUserRequest, ApiBatchUpdateSettingsRequest, ApiBroadcastNotificationRequest, ApiResolveReportRequest, ApiUpdateSettingRequest, ApiVerifyCommissionRequest } from "../../types/api";
+import type { ApiBanUserRequest, ApiBatchUpdateSettingsRequest, ApiBroadcastNotificationRequest, ApiResolveReportRequest, ApiUpdateListingStatusRequest, ApiUpdateSettingRequest, ApiVerifyCommissionRequest } from "../../types/api";
 import type { ApiClient } from "../http";
 import { ApiError } from "../http";
 import type { AdminServices, CatalogService, ListOptions, LocalReviewServices, RequestContext } from "./contracts";
 import { catalogList, serverQuery, validateCatalogQuery } from "./listQuery";
-import { ContractMappingError, mapActionResponse, mapBanner, mapCategory, mapCommission, mapDashboardMetrics, mapListResponse, mapPaginatedResponse, mapRegion, mapReport, mapSuccessResponse, mapSystemSetting, mapUser, mapVillage } from "./mappers";
+import { ContractMappingError, mapActionResponse, mapBanner, mapCategory, mapCommission, mapDashboardMetrics, mapListResponse, mapListing, mapPaginatedResponse, mapRegion, mapReport, mapSuccessResponse, mapSystemSetting, mapUser, mapVillage } from "./mappers";
 import { bannerRequest, booleanInput, categoryRequest, entityId, inputRecord, invalidInput, missingRecord, regionRequest, textInput, unsupportedContract, villageRequest } from "./validation";
 
 export type ServiceOptions = Readonly<{
@@ -87,8 +87,18 @@ export function createAdminServices(client: ApiClient, options: ServiceOptions =
       }),
     },
     listings: {
-      list: (query) => run(query, () => options.localReview?.listings.list(query) ?? unsupportedContract()),
-      moderate: (id, input, context) => run(context, () => options.localReview?.listings.moderate(id, input, context) ?? unsupportedContract()),
+      list: (query = {}) => run(query, async () => mapPaginatedResponse(await client.get<unknown>("admin/ads", { query: serverQuery("listings", query), signal: query.signal }), mapListing)),
+      moderate: (id, value, context) => run(context, async () => {
+        const input = inputRecord(value, ["status", "reason"]);
+        if (input.status !== "active" && input.status !== "rejected") return unsupportedContract();
+        // A rejection reason is mandatory in the dashboard, but the executable
+        // backend DTO accepts only status. Do not silently add an unknown field.
+        if (input.status === "rejected") textInput(input.reason);
+        else if (input.reason !== undefined) return unsupportedContract();
+        const body: ApiUpdateListingStatusRequest = { status: input.status };
+        return action(`admin/ads/${entityId(id)}/status`, "patch", body, context);
+      }),
+      delete: (id, context) => run(context, async () => mapActionResponse(await client.delete<unknown>(`admin/ads/${entityId(id)}`, { signal: context?.signal }))),
     },
     broadcasts: {
       send: (value, context) => run(context, async () => {

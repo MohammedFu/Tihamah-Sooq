@@ -66,6 +66,38 @@ describe.each(cases)("$resource provider contract", ({ resource, input, wire, ro
 });
 
 describe("list semantics and failure boundaries", () => {
+  it("exposes only the confirmed dashboard statistics custom read", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({
+      success: true,
+      data: {
+        total_users: 24,
+        active_ads: 7,
+        sold_ads: 5,
+        pending_review_ads: 3,
+        total_commissions: 1200.5,
+        pending_commissions: 250,
+        paid_commissions: 750.5,
+        open_reports: 2,
+      },
+    }));
+    const { provider } = remote(fetcher);
+    const result = await provider.custom!({ url: "/admin/stats/", method: "get" });
+    expect(result.data).toMatchObject({
+      totalUsers: 24,
+      newUsersToday: null,
+      activeListings: 7,
+      pendingReviewListings: 3,
+      paidCommissions: 750.5,
+      verifiedCommissions: null,
+      openReports: 2,
+      otpMessagesUsed: null,
+    });
+    expect(fetcher.mock.calls[0][0]).toBe("https://api.example.test/api/v1/admin/stats");
+    await expect(provider.custom!({ url: "admin/users", method: "get" })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
+    await expect(provider.custom!({ url: "admin/stats", method: "post" })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("filters before sorting and slicing complete catalogs, retaining filtered totals", async () => {
     const provider = createAdminDataProvider(createFixtureAdminServices(), "/api/v1");
     const result = await provider.getList({ resource: "categories", filters: [{ field: "isActive", operator: "eq", value: true }], sorters: [{ field: "sortOrder", order: "desc" }], pagination: { currentPage: 2, pageSize: 2 } });
@@ -103,6 +135,20 @@ describe("list semantics and failure boundaries", () => {
     if (resource === "users") expect(url.searchParams.get("q")).toBe("أحمد +");
   });
 
+  it("exposes confirmed listing reads and pessimistic moderation/delete actions", async () => {
+    const listing = seed.listings[0];
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ success: true, data: [listing], pagination: { page: 1, limit: 10, total_rows: 1, total_pages: 1 } }))
+      .mockResolvedValueOnce(Response.json({ success: true, message: "updated" }))
+      .mockResolvedValueOnce(Response.json({ success: true, message: "hidden" }));
+    const { provider } = remote(fetcher);
+    const result = await provider.getList({ resource: "listings", filters: [{ field: "status", operator: "eq", value: "pending_review" }], sorters: [{ field: "price", order: "asc" }], pagination: { currentPage: 1, pageSize: 10 } });
+    expect(result).toMatchObject({ total: 1, data: [{ id: 1048, status: "pending_review" }] });
+    expect(String(fetcher.mock.calls[0][0])).toContain("/admin/ads?");
+    expect(await provider.update({ resource: "listings", id: 1048, variables: { status: "rejected", reason: "سعر وهمي" } })).toEqual({ data: { id: 1048, message: "updated" } });
+    expect(await provider.deleteOne({ resource: "listings", id: 1048 })).toEqual({ data: { id: 1048, message: "hidden" } });
+  });
+
   it("rejects unknown resources, filters, sorters, IDs and unsafe mutation extensions before I/O", async () => {
     const fetcher = vi.fn<typeof fetch>();
     const { provider } = remote(fetcher);
@@ -111,6 +157,8 @@ describe("list semantics and failure boundaries", () => {
       provider.getList({ resource: "users", filters: [{ field: "regionId", operator: "eq", value: 1 }] }),
       provider.getList({ resource: "reports", pagination: { mode: "off" } }),
       provider.getList({ resource: "users", sorters: [{ field: "id", order: "desc" }] }),
+      provider.getList({ resource: "listings", pagination: { currentPage: 1, pageSize: 10 } }),
+      provider.getList({ resource: "listings", filters: [{ field: "status", operator: "eq", value: "active" }], sorters: [{ field: "views", order: "desc" }] }),
       provider.getList({ resource: "categories", filters: [{ operator: "or", value: [] }] }),
       provider.getList({ resource: "categories", sorters: [{ field: "constructor", order: "asc" }] }),
       provider.getList({ resource: "categories", pagination: { currentPage: 0 } }),

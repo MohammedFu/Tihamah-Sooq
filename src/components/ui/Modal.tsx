@@ -15,8 +15,8 @@ export function Modal({ open, title, children, onClose }: ModalProps) {
     if (!open) return;
     const frame = window.requestAnimationFrame(() => {
       if (dialogRef.current?.contains(document.activeElement)) return;
-      const preferred = dialogRef.current?.querySelector<HTMLElement>("[data-autofocus], [autofocus], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])");
-      preferred?.focus();
+      const preferred = dialogRef.current?.querySelector<HTMLElement>("[data-autofocus], [autofocus], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])");
+      (preferred ?? dialogRef.current)?.focus();
     });
     return () => {
       window.cancelAnimationFrame(frame);
@@ -31,8 +31,12 @@ export function Modal({ open, title, children, onClose }: ModalProps) {
       return;
     }
     if (event.key !== "Tab" || !dialogRef.current) return;
-    const focusable = [...dialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")];
-    if (focusable.length === 0) return;
+    const focusable = [...dialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")];
+    if (focusable.length === 0) {
+      event.preventDefault();
+      dialogRef.current.focus();
+      return;
+    }
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
     if (event.shiftKey && document.activeElement === first) {
@@ -47,8 +51,8 @@ export function Modal({ open, title, children, onClose }: ModalProps) {
   if (!open) return null;
   return (
     <div className="modal-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section ref={dialogRef} className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId} onKeyDown={handleKeyDown}>
-        <div className="drawer-head"><h2 id={titleId}>{title}</h2><button className="icon-button" type="button" onClick={onClose} aria-label="إغلاق"><X size={18} /></button></div>
+      <section ref={dialogRef} className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={handleKeyDown}>
+        <div className="drawer-head"><h2 id={titleId}>{title}</h2><button className="icon-button" type="button" onClick={onClose} aria-label="إغلاق"><X aria-hidden="true" size={18} /></button></div>
         <div className="modal-body">{children}</div>
       </section>
     </div>

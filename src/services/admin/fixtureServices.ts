@@ -2,9 +2,8 @@ import { ApiClient } from "../http";
 import type { LocalReviewServices } from "./contracts";
 import { createAdminFixtureData, fixtureDate } from "./fixtureData";
 import { paginate } from "./listQuery";
-import { mapListing } from "./mappers";
 import { createAdminServices, type ServiceOptions } from "./services";
-import { entityId, inputRecord, missingRecord, textInput, unsupportedContract } from "./validation";
+import { unsupportedContract } from "./validation";
 
 // An isolated in-memory transport exercises the same requests, response mappers and
 // list semantics as remote mode. It never calls the network or persists user data.
@@ -20,6 +19,40 @@ export function createFixtureAdminServices(options: Pick<ServiceOptions, "assert
     const method = init?.method ?? "GET";
     const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
     const id = Number(idText);
+
+    if (resource === "ads") {
+      if (method === "GET" && !idText) {
+        let rows = state.listings.filter((row) => row.status === url.searchParams.get("status"));
+        const query = url.searchParams.get("q")?.toLocaleLowerCase("ar");
+        if (query) rows = rows.filter((row) => `${row.title} ${row.description}`.toLocaleLowerCase("ar").includes(query));
+        for (const [parameter, field] of [["category_id", "category_id"], ["region_id", "region_id"], ["village_id", "village_id"]] as const) {
+          if (url.searchParams.has(parameter)) rows = rows.filter((row) => row[field] === Number(url.searchParams.get(parameter)));
+        }
+        if (url.searchParams.has("min_price")) rows = rows.filter((row) => row.price >= Number(url.searchParams.get("min_price")));
+        if (url.searchParams.has("max_price")) rows = rows.filter((row) => row.price <= Number(url.searchParams.get("max_price")));
+        const sort = url.searchParams.get("sort");
+        rows = [...rows].sort((left, right) => sort === "price_asc" ? left.price - right.price : sort === "price_desc" ? right.price - left.price : right.created_at.localeCompare(left.created_at));
+        const page = Number(url.searchParams.get("page"));
+        const limit = Number(url.searchParams.get("limit"));
+        return Response.json({ success: true, data: rows.slice((page - 1) * limit, page * limit), pagination: { page, limit, total_rows: rows.length, total_pages: Math.ceil(rows.length / limit) } });
+      }
+      const index = state.listings.findIndex((row) => row.id === id);
+      if (index < 0) return error(404);
+      if (method === "PATCH" && action === "status") {
+        const current = state.listings[index].status;
+        const next = String(body.status);
+        const permitted = (current === "pending_review" && ["active", "rejected"].includes(next))
+          || (current === "active" && next === "rejected")
+          || (current === "rejected" && next === "active");
+        if (!permitted) return error(409);
+        state.listings[index] = { ...state.listings[index], status: next, updated_at: fixtureDate };
+        return done();
+      }
+      if (method === "DELETE" && !action) {
+        state.listings.splice(index, 1);
+        return done();
+      }
+    }
 
     if (resource === "categories" || resource === "regions" || resource === "villages" || resource === "banners") {
       // These are wire records, not values exposed to consumers. Responses serialize
@@ -108,23 +141,6 @@ export function createFixtureAdminServices(options: Pick<ServiceOptions, "assert
     return error(404);
   };
   const localReview: LocalReviewServices = {
-    listings: {
-      async list(query = {}) {
-        if (query.filters?.length || query.sorters?.length) return unsupportedContract();
-        return paginate(state.listings.map((listing) => mapListing(listing)), query);
-      },
-      async moderate(id, value) {
-        entityId(id);
-        const input = inputRecord(value, ["status", "reason"]);
-        if (!["active", "rejected", "removed"].includes(String(input.status))) return unsupportedContract();
-        if (input.status !== "active") textInput(input.reason);
-        const index = state.listings.findIndex((row) => row.id === id);
-        if (index < 0) return missingRecord();
-        if (input.status === "removed") state.listings.splice(index, 1);
-        else state.listings[index] = { ...state.listings[index], status: String(input.status), updated_at: fixtureDate };
-        return { message: "تم حفظ قرار المراجعة التجريبي." };
-      },
-    },
     audit: { async list(query = {}) {
       if (query.filters?.length || query.sorters?.length) return unsupportedContract();
       return paginate(state.audit.map((row) => ({ ...row })), query);

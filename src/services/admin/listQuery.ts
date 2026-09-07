@@ -54,21 +54,43 @@ export function catalogList<T extends { id: number }>(resource: string, items: r
   });
   return paginate(filtered, options);
 }
-export function serverQuery(resource: "users" | "commissions" | "reports", options: ListOptions = {}): QueryParameters {
+function nonNegativeNumber(value: unknown) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return invalidInput();
+  return value;
+}
+
+export function serverQuery(resource: "users" | "commissions" | "reports" | "listings", options: ListOptions = {}): QueryParameters {
   const { page, pageSize } = listPage(options);
-  if (options.paginate === false || options.sorters?.length) return unsupportedContract();
+  if (options.paginate === false) return unsupportedContract();
   const query: Record<string, string | number | boolean> = { page, limit: pageSize };
+  if (resource !== "listings" && options.sorters?.length) return unsupportedContract();
+  if (resource === "listings") {
+    if ((options.sorters?.length ?? 0) > 1) return unsupportedContract();
+    const sorter = options.sorters?.[0];
+    if (sorter) {
+      if (sorter.field !== "price" || !["asc", "desc"].includes(sorter.order)) return unsupportedContract();
+      query.sort = sorter.order === "asc" ? "price_asc" : "price_desc";
+    }
+  }
   const seen = new Set<string>();
   for (const filter of options.filters ?? []) {
     if (seen.has(filter.field)) return unsupportedContract();
     seen.add(filter.field);
-    if (resource === "users" && filter.field === "q" && ["eq", "contains"].includes(filter.operator)) query.q = textInput(filter.value, true);
+    if ((resource === "users" || resource === "listings") && filter.field === "q" && ["eq", "contains"].includes(filter.operator)) query.q = textInput(filter.value, true);
     else if (resource === "users" && filter.field === "isBanned" && filter.operator === "eq") query.is_banned = booleanInput(filter.value);
     else if (resource !== "users" && filter.field === "status" && filter.operator === "eq") {
-      const allowed = resource === "reports" ? ["open", "resolved"] : ["unpaid", "paid", "verified", "rejected"];
+      const allowed = resource === "reports" ? ["open", "resolved"] : resource === "listings" ? ["pending_review", "active", "sold", "rejected"] : ["unpaid", "paid", "verified", "rejected"];
       if (typeof filter.value !== "string" || !allowed.includes(filter.value)) return invalidInput();
       query.status = filter.value;
+    } else if (resource === "listings" && ["categoryId", "regionId", "villageId"].includes(filter.field) && filter.operator === "eq") {
+      const key = filter.field === "categoryId" ? "category_id" : filter.field === "regionId" ? "region_id" : "village_id";
+      query[key] = entityId(filter.value);
+    } else if (resource === "listings" && ["minPrice", "maxPrice"].includes(filter.field) && filter.operator === "eq") {
+      query[filter.field === "minPrice" ? "min_price" : "max_price"] = nonNegativeNumber(filter.value);
     } else return unsupportedContract();
   }
+  // The executable repository defaults an omitted status to active, so callers
+  // must select one status rather than mislabelling that response as "all".
+  if (resource === "listings" && !seen.has("status")) return unsupportedContract();
   return query;
 }

@@ -45,6 +45,8 @@ Shared administrative forms use React Hook Form and Zod, accessible field/error 
 
 Feature feedback and Refine mutations share a typed notification queue with success, error, warning, information, and persistent progress states. The retry and high-risk mutation rules are documented in [the notification guide](./docs/NOTIFICATIONS.md).
 
+Accessibility checks cover WCAG A/AA automation on login, every protected route, and interactive overlays at mobile and desktop widths. Shared navigation, dialogs, drawers, route headings, tabs, upload controls, reduced motion, contrast, RTL reading order, and LTR operational values follow the keyboard and verification rules in [the accessibility guide](./docs/ACCESSIBILITY.md).
+
 ## Development
 
 ```bash
@@ -89,4 +91,4 @@ Fixture mode accepts either documented identifier with the development-only pass
 | Phone | `+966500000000` |
 | Password | `Admin@123456` |
 
-The operational pages currently update local typed fixtures for workflow review. A registered Refine data provider and explicit admin services support fixture/remote modes for confirmed contracts, and RBAC now protects the fixture workflows while page integration remains in T17–T25. The next dependency-safe task is the accessibility and RTL review (T16). See [the administrative data contract and usage guide](./docs/ADMIN_DATA.md) for supported queries, mutation inputs, cache behavior and blocked contracts.
+The dashboard metrics and listing-moderation page now read their confirmed backend contracts through Refine in fixture or remote mode. Listing review includes server status/search/pagination/price sorting, media detail fallbacks, pessimistic moderation, and confirmed soft deletion; rejection-reason persistence remains visibly blocked by the current backend DTO. The remaining operational pages still use local typed fixtures for workflow review until T19–T25. See [the listing moderation guide](./docs/LISTING_MODERATION.md), [dashboard metrics guide](./docs/DASHBOARD_METRICS.md), and [administrative data contract](./docs/ADMIN_DATA.md). The next dependency-safe task is user management (T19).

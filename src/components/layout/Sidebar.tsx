@@ -1,4 +1,5 @@
 import { usePermissions } from "@refinedev/core";
+import { X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { canAccessWithPermissions } from "../../providers/accessControlProvider";
 import type { Permission } from "../../types/domain";
@@ -13,11 +14,14 @@ export function Sidebar({ open, onNavigate }: SidebarProps) {
     items: group.items.filter((item) => permissions.isSuccess && canAccessWithPermissions(permissions.data, item.resource, "list")),
   })).filter((group) => group.items.length > 0);
   return (
-    <aside className={`sidebar ${open ? "open" : ""}`} aria-label="التنقل الرئيسي">
-      <NavLink className="brand" to="/" onClick={onNavigate}>
-        <span className="brand-mark">ت</span>
-        <span>سوق <span className="brand-accent">تهامة</span></span>
-      </NavLink>
+    <aside className={`sidebar ${open ? "open" : ""}`} aria-label="التنقل الرئيسي" role={open ? "dialog" : undefined} aria-modal={open || undefined}>
+      <div className="sidebar-heading">
+        <NavLink className="brand" to="/" onClick={onNavigate}>
+          <span className="brand-mark">ت</span>
+          <span>سوق <span className="brand-accent">تهامة</span></span>
+        </NavLink>
+        <button className="icon-button sidebar-close" data-sidebar-close type="button" onClick={onNavigate} aria-label="إغلاق القائمة"><X aria-hidden="true" size={18} /></button>
+      </div>
       <nav>
         {visibleNavigation.map((group) => (
           <div key={group.label}>
