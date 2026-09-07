@@ -199,6 +199,18 @@ describe("list semantics and failure boundaries", () => {
     expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ status: "verified" });
   });
 
+  it("resolves report via dataProvider and delegates to reports.resolve", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({ success: true, message: "Report resolved" }),
+    );
+    const { provider } = remote(fetcher);
+    const result = await provider.update({ resource: "reports", id: 801, variables: { notes: "تم اتخاذ الإجراء" } });
+    expect(result.data).toMatchObject({ id: 801, message: "Report resolved" });
+    expect(fetcher.mock.calls[0][0]).toBe("https://api.example.test/api/v1/admin/reports/801/resolve");
+    expect(fetcher.mock.calls[0][1]?.method).toBe("PATCH");
+    expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ status: "resolved", resolution_notes: "تم اتخاذ الإجراء" });
+  });
+
   it("normalizes malformed payloads without silently treating them as empty lists", async () => {
     const { provider } = remote(vi.fn<typeof fetch>().mockResolvedValue(Response.json({ success: true, data: [{ id: 1 }] })));
     await expect(provider.getList({ resource: "categories" })).rejects.toMatchObject({ kind: "invalid_response" });

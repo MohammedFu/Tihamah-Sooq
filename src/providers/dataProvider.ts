@@ -74,6 +74,13 @@ export function createAdminDataProvider(services: AdminServices, apiUrl: string)
         const result = await services.commissions.verify(numericId(id), variables as VerificationInput, context(meta));
         return { data: refineRecord(result) };
       }
+      if (resource === "reports") {
+        const notes = typeof variables === "object" && variables !== null && "notes" in variables
+          ? String((variables as { notes: unknown }).notes)
+          : String(variables);
+        const result = await services.reports.resolve(numericId(id), notes, context(meta));
+        return { data: refineRecord({ id: numericId(id), ...result }) };
+      }
       return { data: refineRecord(await catalog(resource).update(numericId(id), variables, context(meta))) };
     },
     async deleteOne({ resource, id, meta }) {

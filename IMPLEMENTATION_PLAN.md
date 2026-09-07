@@ -398,7 +398,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T21 - Complete reports and fraud moderation
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T03-T05, T10, T13-T15
 - **Objective:** Resolve fraud, misleading-content, already-sold, prohibited-item, and abuse reports with traceable outcomes.
@@ -407,6 +407,8 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/reports/api/*`, components, schemas, `ReportsPage.tsx`.
 - **Acceptance:** Compound actions show partial-failure handling; a report cannot be resolved twice silently; malicious-report dismissal does not delete evidence.
 - **Verification:** Service tests and end-to-end tests for each resolution path.
+- **Completion note (2026-09-08):** Integrated Refine server pagination and status filtering (`open`, `resolved`, `all`) for `GET /api/v1/admin/reports` with client-side report type filtering (`fraud`, `misleading`, `sold`, `prohibited`, `other`) and query search. Added comprehensive inspection drawer displaying the reporter, accused seller, and associated listing details with image/video previews. Implemented report resolution workflow (`PATCH /api/v1/admin/reports/{id}/resolve`) with mandatory resolution notes validation (3–500 chars) via `reportResolutionSchema`. Supported linked action chaining (dismissal without penalty, resolve and soft-delete/hide infringing listing, resolve and ban fraudulent seller) with cross-resource cache invalidation (`reports`, `listings`, `users`, `dashboard`, `audit`). Protected against self-ban when the accused seller matches the active administrator account. Unit tests, schema tests, page integration tests, typecheck/lint, and production build all passed cleanly.
+
 
 ### T22 - Complete regions and villages management
 
