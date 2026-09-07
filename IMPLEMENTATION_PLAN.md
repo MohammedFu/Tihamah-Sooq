@@ -412,7 +412,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T22 - Complete regions and villages management
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T03-T05, T10, T14-T15
 - **Objective:** Manage the geographic hierarchy without orphaning listings or users.
@@ -421,6 +421,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/locations/api/*`, components, schemas, `LocationsPage.tsx`.
 - **Acceptance:** Region selection is required for villages; duplicate names are reported; active dependencies block deletion with useful counts; soft delete is preferred where supported.
 - **Verification:** Tree mutation tests and dependency-conflict integration tests.
+- **Completion note (2026-09-08):** Connected `LocationsPage` to Refine data provider via dedicated `useLocations` hook (`useList`, `useCreate`, `useUpdate`, `useDelete`) backed by `services.regions` and `services.villages`. Implemented Arabic validation schemas for regions and villages with region-binding requirement (`villageSchema`) and activation flags. Added client-side dependency protection blocking region deletion when child villages exist with informative count messaging, plus server 409 conflict handling when deleting villages linked to users or listings. Added real-time search filtering across regions and villages while keeping tree expanded state stable across mutations. Unit tests, schema tests, page integration tests, full test suite (196 tests), and production build all passed cleanly.
 
 ### T23 - Complete categories management
 
