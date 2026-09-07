@@ -1,5 +1,5 @@
 import type { BaseRecord, DataProvider, GetListParams } from "@refinedev/core";
-import type { AdminServices, CatalogService, ListFilter, ListOptions, ListSort } from "../services/admin/contracts";
+import type { AdminServices, CatalogService, ListFilter, ListOptions, ListSort, ModerationInput } from "../services/admin/contracts";
 import { entityId, invalidInput, unsupportedContract } from "../services/admin/validation";
 import { ApiError } from "../services/http";
 
@@ -40,8 +40,8 @@ export function createAdminDataProvider(services: AdminServices, apiUrl: string)
     getApiUrl: () => apiUrl,
     async getList<TData extends BaseRecord>(params: GetListParams) {
       const options = listOptions(params);
-      const service = ["users", "commissions", "reports"].includes(params.resource)
-        ? services[params.resource as "users" | "commissions" | "reports"] : catalog(params.resource);
+      const service = ["users", "commissions", "reports", "listings"].includes(params.resource)
+        ? services[params.resource as "users" | "commissions" | "reports" | "listings"] : catalog(params.resource);
       const result = await service.list(options);
       return { data: result.items.map((item) => refineRecord<TData>(item)), total: result.pagination.totalItems };
     },
@@ -62,10 +62,24 @@ export function createAdminDataProvider(services: AdminServices, apiUrl: string)
       return { data: refineRecord(await catalog(resource).create(variables, context(meta))) };
     },
     async update({ resource, id, variables, meta }) {
+      if (resource === "listings") {
+        const result = await services.listings.moderate(numericId(id), variables as ModerationInput, context(meta));
+        return { data: refineRecord({ id: numericId(id), ...result }) };
+      }
       return { data: refineRecord(await catalog(resource).update(numericId(id), variables, context(meta))) };
     },
     async deleteOne({ resource, id, meta }) {
+      if (resource === "listings") {
+        const numeric = numericId(id);
+        const result = await services.listings.delete(numeric, context(meta));
+        return { data: refineRecord({ id: numeric, ...result }) };
+      }
       return { data: refineRecord(await catalog(resource).delete(numericId(id), context(meta))) };
+    },
+    async custom({ url, method, meta }) {
+      const normalizedUrl = url.replace(/^\/+|\/+$/g, "");
+      if (method !== "get" || normalizedUrl !== "admin/stats") return unsupportedContract();
+      return { data: refineRecord(await services.statistics.get(context(meta))) };
     },
   };
 }

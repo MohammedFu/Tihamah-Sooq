@@ -2,11 +2,11 @@
 
 T05 registers `adminDataProvider` with Refine in `src/app/App.tsx`. Runtime composition lives in `src/app/providers.tsx`; `VITE_API_MODE` selects fixture or remote services with the same `AdminServices` interface. Remote requests use the existing HTTP client and session repository. Both runtime modes reject operations without a valid administrator session. The backend remains responsible for authorization; the frontend permission matrix is T09–T10.
 
-The operational pages still use their original review fixtures until their individual T17–T25 integrations. Registering a provider does not make those pages live. The new provider fixture store is separate from the original page fixtures, lives in memory, resets on reload, and makes no network requests. Each factory invocation creates independent state.
+The dashboard statistics and listing-moderation page now read through the registered provider. The remaining operational pages still use their original review fixtures until their individual T19–T25 integrations. The provider fixture store is separate from those page fixtures, lives in memory, resets on reload, and makes no network requests. Each factory invocation creates independent state.
 
 ## Sources and contract decisions
 
-Reviewed on 2026-09-05: `Notebook/swagger_docs_v2.go`, `Notebook/tihamah-haraj-postman-collection.json`, the unified API specification, and the relevant commission section of the detailed API guide. No backend implementation or backend tests are available in the supplied reference set.
+Reviewed through 2026-09-07: the executable backend router/handler/DTO, `Notebook/swagger_docs_v2.go`, `Notebook/tihamah-haraj-postman-collection.json`, the unified API specification, and the relevant sections of the detailed API and dashboard guides.
 
 Use an API base URL ending in `/api/v1`, for example `https://api.example.com/api/v1` or `/api/v1`. Services append `admin/...`; do not include `/admin` in the configured base URL.
 
@@ -19,6 +19,8 @@ Use an API base URL ending in `/api/v1`, for example `https://api.example.com/ap
 | `users` | GET collection | Server `page`, `limit`, `q`, `is_banned` |
 | `commissions` | GET collection | Server `page`, `limit`, `status` |
 | `reports` | GET collection | Server `page`, `limit`, `status` |
+| `listings` | GET `/admin/ads` | Server `page`, `limit`, required `status`, optional `q`, and price sorting |
+| `statistics` | GET `/admin/stats` | One aggregate object; no server timestamp is returned |
 
 There are no confirmed GET-by-ID routes for the four editable catalogs. Catalog filtering, sorting and pagination therefore run over the returned collection; `total` is the filtered count before slicing. No undocumented pagination or sorting parameters are sent. `getMany` makes one collection read and returns requested IDs in order; missing IDs fail with 404. Server-paginated resources preserve `pagination.total_rows` instead of counting the current page.
 
@@ -55,13 +57,14 @@ Services accept `signal` in their request context; Refine callers can supply `me
 
 Business actions use `adminServices` directly instead of generic CRUD or arbitrary `custom` URLs:
 
-- `statistics.get()` maps `/admin/stats`, retaining nullable optional counters and numeric monetary amounts.
+- `statistics.get()` maps `/admin/stats`, retaining nullable optional counters and numeric monetary amounts. T17 exposes this single read through Refine's restricted `custom` provider method; other custom URLs or verbs remain unsupported.
 - `users.ban(id, { isBanned, reason })` uses PATCH `/admin/users/{id}/ban`. A ban requires a nonblank reason. Unban sends `is_banned: false` and clears the reason. The response is an action acknowledgement, not a user record or proof that active sessions were revoked.
 - `reports.resolve(id, notes)` uses PATCH `/admin/reports/{id}/resolve` with `status: "resolved"` and required `resolution_notes`. Its acknowledgement does not claim a compound listing deletion or user ban occurred.
+- `listings.list` uses GET `/admin/ads`; `listings.moderate` uses PATCH `/admin/ads/{id}/status`; and `listings.delete` uses DELETE `/admin/ads/{id}`. List rows contain the relations and media used by the detail drawer. Rejection requires a local reason, but only `status` is sent because the backend DTO has no reason field. Delete is presented as a soft-delete/hide operation. See [the listing moderation guide](./LISTING_MODERATION.md).
 - `commissions.verify(id, { status: "verified" })` uses PATCH `/admin/commissions/{id}/verify`. Swagger references an absent `dto.VerifyCommissionRequest` definition and Postman contains `{}`. The detailed API guide confirms only `{ "status": "verified" }`. Remote rejection and notes fail with `UNCONFIRMED_ADMIN_CONTRACT`, rather than dropping financial decision data. Fixture mode supports rejection with notes for local review. T20 must confirm the full financial contract before connecting that workflow.
 - `broadcasts.send({ title, body, audience: "all" })` sends POST `/admin/notifications/broadcast`. Region/village targets are rejected in both modes; they must never silently become a broadcast to everyone. Success acknowledges acceptance, not a recipient count or delivery guarantee.
 - `settings.list/update/updateBatch/setOtpEnabled` use the documented settings paths and verbs. Single/batch/OTP mutations can return top-level acknowledgement fields rather than a `data` envelope. Setting keys cannot select nested routes. SMS gateway controls and the missing `TestSMSRequest` DTO remain part of T25.
-- `listings.list/moderate` and `audit.list` have explicit local-review adapters in fixture mode. Remote mode rejects them before I/O; no admin route is invented and no public/mobile listing endpoint is substituted. Fixture audit rows are read-only seed data; mutations never fabricate server-confirmed audit entries.
+- `audit.list` retains an explicit local-review adapter in fixture mode because no remote audit-list route is confirmed. Fixture audit rows are read-only seed data; mutations never fabricate server-confirmed audit entries.
 
 Catalog deletes return only `{ id }` after a confirmed success or empty 204/205 response. Neither a fabricated deleted record nor a hard/soft-delete guarantee is returned. Fixture mode simulates dependency conflicts; actual backend constraints remain authoritative.
 
@@ -78,6 +81,8 @@ await runAction("village", () => adminServices.villages.update(id, values));
 ```
 
 Other action scopes cover affected user/listing/commission/report metrics and audit resources. `report` resolution refreshes reports, dashboard and audit; compound actions must invoke their own user/listing scopes. Failed actions invalidate nothing and are not retried automatically. T10 now enforces those compound permissions in the fixture UI; feature hooks must retain pending/error/form state, prevent duplicate submissions, provide confirmations, and refetch after acknowledged mutations as pages move to the provider in their scheduled tasks.
+
+Dashboard statistics remain fresh in Refine's client cache for five minutes and support explicit refresh. The shown update time is the time of the last successful client fetch because the backend response has no timestamp. A failed background refresh preserves the last successful data and marks the failure; missing new-user/new-listing/verified-commission/OTP extensions are displayed as unavailable. See [the dashboard metrics guide](./DASHBOARD_METRICS.md).
 
 Errors retain `ApiError.kind`, `status`, Refine-compatible `statusCode`, and safe Arabic messages. Invalid mapped responses produce `INVALID_ADMIN_RESPONSE` rather than an empty success. 401 clears the remote session through the HTTP client; 403 and conflicts propagate without changing local records. Loading/success/empty/error states are exposed through Refine query and mutation state without adding temporary product UI.
 

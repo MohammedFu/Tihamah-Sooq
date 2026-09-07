@@ -125,6 +125,10 @@ export type ApiListing = Readonly<{
   media?: readonly ApiListingMedia[];
 }>;
 
+export type ApiUpdateListingStatusRequest = Readonly<{
+  status: "active" | "rejected";
+}>;
+
 export type ApiBanner = Readonly<{
   id: ApiEntityId;
   image_url: string;

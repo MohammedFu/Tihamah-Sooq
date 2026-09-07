@@ -12,10 +12,10 @@ import { useAdminNotification } from "../../../providers/notificationStore";
 function commissionColumns(onSelect: (record: CommissionRecord) => void): DataTableColumn<CommissionRecord>[] {
   return [
     { id: "seller", header: "البائع", cell: (item) => <><strong>{item.seller}</strong><small className="block-copy" dir="ltr">{item.phone}</small></> },
-    { id: "listing", header: "الإعلان المباع", cell: (item) => <>{item.listing}<small className="block-copy">فاتورة #{item.id}</small></> },
+    { id: "listing", header: "الإعلان المباع", cell: (item) => <>{item.listing}<small className="block-copy">فاتورة <bdi dir="ltr">#{item.id}</bdi></small></> },
     { id: "soldPrice", header: "قيمة البيع", className: "numeric", cell: (item) => <>{item.soldPrice.toLocaleString("ar-SA")} ر.س</> },
     { id: "amount", header: "العمولة 1%", className: "numeric emphasis", cell: (item) => <>{item.amount.toLocaleString("ar-SA")} ر.س</> },
-    { id: "reference", header: "مرجع التحويل", cell: (item) => item.reference },
+    { id: "reference", header: "مرجع التحويل", cell: (item) => <bdi dir="ltr">{item.reference}</bdi> },
     { id: "status", header: "الحالة", cell: (item) => <StatusBadge value={item.status} /> },
     { id: "action", header: "التدقيق", cell: (item) => <AuthorizedButton resource="commissions" action="show" className="icon-button table-action" type="button" onClick={() => onSelect(item)} aria-label="تدقيق العمولة" title="تدقيق العمولة"><Eye size={17} /></AuthorizedButton> },
   ];
@@ -56,7 +56,7 @@ export function CommissionsPage() {
 
       <Drawer open={Boolean(selected)} title={selected ? `تدقيق الفاتورة #${selected.id}` : ""} onClose={() => setSelected(null)}>{selected && <div className="detail-stack">
         <div className="commission-amount"><FileCheck2 size={22} /><span><small>العمولة المطلوب مطابقتها</small><strong>{selected.amount.toLocaleString("ar-SA")} ر.س</strong></span><StatusBadge value={selected.status} /></div>
-        <dl className="detail-grid"><div><dt>البائع</dt><dd>{selected.seller}</dd></div><div><dt>رقم الجوال</dt><dd dir="ltr">{selected.phone}</dd></div><div><dt>الإعلان</dt><dd>{selected.listing}</dd></div><div><dt>قيمة البيع</dt><dd>{selected.soldPrice.toLocaleString("ar-SA")} ر.س</dd></div><div><dt>البنك</dt><dd>{selected.bank}</dd></div><div><dt>مرجع العملية</dt><dd>{selected.reference}</dd></div></dl>
+        <dl className="detail-grid"><div><dt>البائع</dt><dd>{selected.seller}</dd></div><div><dt>رقم الجوال</dt><dd dir="ltr">{selected.phone}</dd></div><div><dt>الإعلان</dt><dd>{selected.listing}</dd></div><div><dt>قيمة البيع</dt><dd>{selected.soldPrice.toLocaleString("ar-SA")} ر.س</dd></div><div><dt>البنك</dt><dd>{selected.bank}</dd></div><div><dt>مرجع العملية</dt><dd><bdi dir="ltr">{selected.reference}</bdi></dd></div></dl>
         {selected.receipt ? <figure className="receipt-preview"><figcaption>صورة إشعار التحويل</figcaption><img src={selected.receipt} alt="إشعار التحويل البنكي" /></figure> : <div className="empty-state-small">لم يرفع البائع إشعار التحويل بعد.</div>}
         {selected.status === "paid" && <div className="decision-actions"><AuthorizedButton resource="commissions" action="verify" className="button success-button" type="button" onClick={() => update(selected.id, "verified", "تم اعتماد السداد وتحديث ذمة البائع")}><Check size={17} />اعتماد السداد</AuthorizedButton><AuthorizedButton resource="commissions" action="reject" className="button danger-outline" type="button" onClick={() => setRejecting(selected)}><X size={17} />رفض الإشعار</AuthorizedButton></div>}
       </div>}</Drawer>

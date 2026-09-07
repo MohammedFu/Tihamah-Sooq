@@ -17,7 +17,7 @@ export type BannerInput = Readonly<{ imageUrl: string; sortOrder?: number; isAct
 export type ActionResult = Readonly<{ message: string | null }>;
 export type BanInput = Readonly<{ isBanned: boolean; reason?: string }>;
 export type VerificationInput = Readonly<{ status: "verified" | "rejected"; notes?: string }>;
-export type ModerationInput = Readonly<{ status: "active" | "rejected" | "removed"; reason?: string }>;
+export type ModerationInput = Readonly<{ status: "active" | "rejected"; reason?: string }>;
 export type BroadcastInput = Readonly<{ title: string; body: string; audience: "all" | "region" | "village"; targetId?: number }>;
 export type SettingInput = Readonly<{ value: string; description?: string }>;
 
@@ -50,6 +50,7 @@ export interface AdminServices {
   listings: {
     list(options?: ListOptions): Promise<PaginatedResult<Listing>>;
     moderate(id: number, input: ModerationInput, context?: RequestContext): Promise<ActionResult>;
+    delete(id: number, context?: RequestContext): Promise<ActionResult>;
   };
   broadcasts: { send(input: BroadcastInput, context?: RequestContext): Promise<ActionResult> };
   settings: {
@@ -62,4 +63,4 @@ export interface AdminServices {
 }
 
 // Only fixture mode supplies these operations until the backend confirms their contracts.
-export type LocalReviewServices = Pick<AdminServices, "listings" | "audit">;
+export type LocalReviewServices = Pick<AdminServices, "audit">;

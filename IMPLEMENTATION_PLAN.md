@@ -51,7 +51,7 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 
 ## 4. Known Contract Gaps
 
-1. The dashboard analysis describes `GET /admin/listings` and a listing-status moderation endpoint, but the current Swagger/Postman contract does not clearly expose the full admin listing moderation surface. T18 must confirm the backend route before enabling live mutations.
+1. The current backend router (`Tihamah-Haraj/cmd/api/main.go`) confirms `GET /api/v1/admin/ads`, `PATCH /api/v1/admin/ads/{id}/status`, and `DELETE /api/v1/admin/ads/{id}`. T18 must use the backend's `/ads` naming rather than invent `/listings`; a dedicated admin GET-by-ID route is still not registered, so detail behavior must be confirmed from the list response or remain isolated behind the service adapter.
 2. One architecture document describes commission verification as `POST`; current Swagger/Postman uses `PATCH /api/v1/admin/commissions/{id}/verify`. Use `PATCH` unless the backend confirms otherwise.
 3. Older documentation describes `/toggle-ban`; current Swagger/Postman uses `PATCH /api/v1/admin/users/{id}/ban`. Use the latter.
 4. Access-token lifetime is documented as 15 minutes and refresh-token lifetime as 30 days, but an administrator refresh endpoint is not clearly specified. T07 must not invent a refresh route.
@@ -63,6 +63,8 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 10. The executable user-list contract supports `q` and `is_banned`; commission/report lists support `status`, and all three support `page`/`limit`. User geographic filters, report-type filters, and server sorting are not confirmed. T19–T21 must confirm them before enabling remote controls.
 11. Swagger references an absent `dto.TestSMSRequest` and Postman supplies `{}`. T25 must confirm the SMS test body. T05 implements settings list/single/batch/OTP operations; SMS gateway UI integration remains in T25.
 12. T09 confirmed that Swagger's `models.Admin` response does not include a nested role or avatar, while `marketplace_models-v2.go` defines `Role` with `omitempty`. The account UI uses the role only when returned, shows a neutral fallback otherwise, and derives deterministic initials instead of inventing an avatar or profile endpoint.
+13. The dashboard analysis names `/api/v1/admin/dashboard/stats`, Redis caching, and richer growth/OTP counters. The executable router, handler, DTO, Swagger, and Postman instead confirm `GET /api/v1/admin/stats` with eight aggregate fields, no server timestamp, and no confirmed queue-summary route. T17 uses the executable contract, treats extensions as unavailable when omitted, and reports only client fetch freshness.
+14. T18 confirmed that the executable ad repository defaults an omitted `status` to `active`, so it cannot provide a trustworthy all-status page. `dto.UpdateAdStatusRequest` accepts only `status`; rejection reason, moderator/timestamp metadata, record versions/conditional writes, and restore-after-delete are absent. The dashboard uses one explicit status at a time, requires but does not claim to persist a rejection reason, and labels DELETE as soft-delete/hide. The live Swagger document does not currently publish the registered admin-ad routes and should be regenerated.
 
 ## 5. Current Baseline
 
@@ -74,14 +76,16 @@ As of 2026-09-07:
 - Each route has an interactive fixture-backed workflow suitable for UI review.
 - Desktop and 390 px mobile browser sweeps passed with no runtime exceptions or document-level horizontal overflow.
 - `npm run build` passes.
-- Administrator login, session-scoped persistence, expiry validation, logout, protected routing, dynamic RBAC, and dedicated authentication/authorization recovery states are implemented and covered by focused Vitest and Playwright tests. Broader production API integration, automated coverage, and deployment automation remain.
+- Administrator login, session-scoped persistence, expiry validation, logout, protected routing, dynamic RBAC, and dedicated authentication/authorization recovery states are implemented and covered by focused Vitest and Playwright tests. Broader production API integration, remaining domain coverage, and deployment automation remain.
 - `src/data/adminFixtures.ts` is temporary review data, not a production data layer.
 - The dashboard design system now follows `Notebook/design-system.pdf`: its exact Rural palette is exposed through semantic tokens, Tajawal is self-hosted across the required weights, and the mobile component language is extended consistently to desktop navigation, data surfaces, tables, drawers, dialogs, and system states. The mapping and contribution rules are documented in `docs/DESIGN_SYSTEM.md`.
-- T05 registers a session-guarded Refine data provider and typed fixture/remote admin services. Catalog CRUD and confirmed operational services are available; the existing pages still require their T17–T25 integrations. Provider fixtures use a separate isolated in-memory store. Contracts and cache usage are documented in `docs/ADMIN_DATA.md`.
+- T05 registers a session-guarded Refine data provider and typed fixture/remote admin services. T17 dashboard statistics and the confirmed portion of T18 listing moderation now read through it; the remaining operational pages require their T19–T25 integrations. Provider fixtures use a separate isolated in-memory store. Contracts and cache usage are documented in `docs/ADMIN_DATA.md`.
+- T18 now reads status-scoped paginated admin ads through Refine and uses confirmed status and soft-delete routes. Complete list rows drive the media/detail drawer, and mutations are pessimistic and permission-gated. Rejection-reason persistence, all-status listing, moderation attribution, and stale-write protection remain backend gaps documented in `docs/LISTING_MODERATION.md`.
 - The header now uses the administrator identity stored from the confirmed login response. Its accessible account disclosure shows role/contact/session-expiry details, handles missing identity fields safely, and provides keyboard-accessible logout without rendering tokens. Details are documented in `docs/ADMIN_IDENTITY.md`.
 - Shared form infrastructure now uses React Hook Form and Zod, accessible field/error primitives, mutation submission locking, focus-contained/restoring dialogs, dirty-close confirmation, and Refine route/unload warnings. The locations editor is the first integrated reference; remaining page forms migrate with T18-T25. Details are documented in `docs/FORMS.md`.
 - Feature feedback and Refine mutations now share one typed, accessible notification queue with success, error, warning, information, and persistent progress states. Page-local toast timers have been removed, and promise tracking prevents high-risk actions from reporting success before resolution. Details are documented in `docs/NOTIFICATIONS.md`.
-- Verification now includes 119 passing unit/component/provider tests and fifteen established Playwright workflows, including all-route design-system/overflow checks at 390/1440 px, responsive data-table checks at 390/768/1440 px, identity/provider checks, limited-role enforcement, session expiry, safe reauthentication, and requested-route restoration. Production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
+- Accessibility and RTL behavior now includes skip navigation, route-heading focus, modal/drawer focus containment and restoration, an inert keyboard-safe mobile menu, keyboard-operated system tabs, explicit filter/toggle states, accessible file controls and charts, WCAG-AA foreground tokens, reduced motion, and isolated LTR operational values. The implementation and manual review rules are documented in `docs/ACCESSIBILITY.md`.
+- Verification now includes 134 passing unit/component/provider tests and 26 passing Playwright workflows, including listing moderation transitions, dashboard metric screenshots and filter-link checks, axe-core WCAG A/AA scans of login and all nine routes at 390/1440 px, interactive overlay scans, keyboard focus flows, 320 CSS-pixel reflow, all-route design-system/overflow checks, responsive data tables, identity/provider checks, limited-role enforcement, session expiry, safe reauthentication, and requested-route restoration. Production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
 
 ## 6. Target Source Structure
 
@@ -327,7 +331,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T16 - Complete accessibility and RTL review
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T12-T15
 - **Objective:** Make all core workflows usable with keyboard and assistive technology.
@@ -335,12 +339,13 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** Shared components and every page.
 - **Acceptance:** No unlabeled icon buttons; focus never disappears behind overlays; reduced-motion preference is respected; 200% zoom remains usable.
 - **Verification:** Automated accessibility scan plus manual keyboard walkthrough.
+- **Completion note (2026-09-07):** Added an axe-core Playwright suite for WCAG 2.0/2.1 A/AA across login and every protected route at 390/1440 px, plus category/banner/location editors and listing/user/commission/report drawers. Completed the keyboard walkthrough in-browser: the mobile menu is unavailable while off-canvas, makes background content inert while open, receives and restores focus, and closes with Escape; route changes focus the new `h1`; shared drawers now match modal focus containment/restoration; and the system tabs implement roving focus with arrow/Home/End keys. Added a skip link, accessible chart/progress semantics, expanded/pressed/switch states, contextual icon-button names, keyboard-visible upload inputs, reduced-motion delay removal, WCAG-AA foreground/focus tokens, and LTR isolation for IDs, codes, phones, IPs, and payment references. All routes reflow without document overflow at 320 CSS pixels (the 200%-zoom equivalent of a 640 px viewport). Documented the contract in `docs/ACCESSIBILITY.md`. `npm run lint`, all 120 Vitest tests, `npm run build`, and all 23 Playwright tests passed; the build retains the known chunk-size advisory.
 
 ## 11. Phase 4: Operational Workflows
 
 ### T17 - Integrate dashboard metrics
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T03-T05, T13, T15
 - **Objective:** Replace overview fixtures with live platform health and work queues.
@@ -349,18 +354,20 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/dashboard/api/*`, hooks, `OverviewPage.tsx`.
 - **Acceptance:** Missing optional metrics do not crash the page; values and currency are localized; queue links set the correct destination filters.
 - **Verification:** Mapper tests, loading/error/empty states, and browser screenshots.
+- **Completion note (2026-09-07):** Replaced overview metrics, growth chart, OTP values, review rows, and queue counts with the authenticated `GET /api/v1/admin/stats` result. Added a restricted Refine `useCustom` data-provider path, five-minute client freshness/stale state, localized Arabic counts/SAR values, last-success time, locked manual refresh, initial loading/error/retry and valid all-zero states, and preservation of stale data after a failed refresh. Missing new-user/new-listing/verified-commission/OTP extensions render as unavailable without inventing zeroes. Permission-aware queue links now set `pending_review`, `paid`, and `open` filters; the paid commission aggregate is correctly labelled as a value rather than a count. Documented the executable-backend precedence, the older `/admin/dashboard/stats`/Redis discrepancy, and the absence of a server timestamp or queue-summary route in `docs/DASHBOARD_METRICS.md`. `npm run lint`, all 128 Vitest tests, `npm run build`, and all 25 Playwright tests passed; responsive dashboard screenshots were captured at 390/1440 px and the build retains the known chunk-size advisory.
 
 ### T18 - Complete listing moderation
 
-- **Status:** PARTIAL; live API portion may become BLOCKED by contract gap 1.
+- **Status:** PARTIAL; the confirmed list/status/soft-delete workflow is integrated, while rejection/audit/concurrency contract gaps remain backend-blocked.
 - **Priority:** P0
 - **Depends on:** T03-T05, T10, T13-T15
 - **Objective:** Provide safe end-to-end review of pending, active, sold, rejected, and removed listings.
 - **Implementation:** Add server search and filters, pagination, complete listing/media detail, approve, reject with required reason, deactivate/reactivate, and soft delete. Record moderator and timestamps and update only after confirmed responses.
-- **Endpoint:** Confirm admin list/detail/status/delete routes before remote mutations.
+- **Endpoint:** `GET /api/v1/admin/ads`, `PATCH /api/v1/admin/ads/{id}/status`, and `DELETE /api/v1/admin/ads/{id}` are registered in the backend; confirm how complete detail is obtained because no dedicated admin GET-by-ID route is registered.
 - **Primary files:** `src/features/listings/api/*`, components, schemas, `ListingsPage.tsx`.
 - **Acceptance:** Video/image failures have fallbacks; reject reason is mandatory; destructive actions require confirmation; stale moderation decisions return a conflict state.
 - **Verification:** State-transition tests and end-to-end approve/reject/deactivate flows.
+- **Progress note (2026-09-07):** Replaced page fixtures with a Refine-backed, status-scoped `GET /admin/ads` table using server pagination, title/description search, and confirmed price sorting. The list response supplies seller/category/location/media detail because the backend preloads those relations and has no admin GET-by-ID route. Added image/video/absent-media fallbacks, Arabic date/SAR formatting, required rejection validation, pessimistic locked transitions, action error feedback, and a confirmation that accurately describes DELETE as soft deletion. Remote and fixture services now share the same `/admin/ads` paths. Rejection sends only `{status}` and visibly warns that its locally required reason cannot be persisted. T18 remains PARTIAL until the backend adds reason and moderation metadata, reliable all-status listing, and stale/repeated-decision protection. `npm run lint`, all 134 Vitest tests, and `npm run build` passed. The new 390 px moderation workflow and the existing responsive table suite at 390/768/1440 px passed all five focused Playwright cases; the Windows runner reproduced its known post-success teardown stall and was stopped after reporting each case as passed. See `docs/LISTING_MODERATION.md`.
 
 ### T19 - Complete user management
 

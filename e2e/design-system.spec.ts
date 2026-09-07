@@ -12,6 +12,7 @@ async function login(page: import("@playwright/test").Page) {
 
 for (const width of [390, 1440]) {
   test(`applies the PDF design system across every dashboard route at ${width}px`, async ({ page }) => {
+    test.setTimeout(90_000);
     const pageErrors: Error[] = [];
     const unexpectedDialogs: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error));

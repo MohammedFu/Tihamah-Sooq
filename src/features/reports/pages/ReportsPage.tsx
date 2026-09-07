@@ -13,7 +13,7 @@ type Resolution = "dismiss" | "delete" | "ban";
 
 function reportColumns(onSelect: (report: ReportRecord) => void): DataTableColumn<ReportRecord>[] {
   return [
-    { id: "id", header: "رقم البلاغ", className: "numeric", cell: (report) => <>#{report.id}</> },
+    { id: "id", header: "رقم البلاغ", className: "numeric", cell: (report) => <bdi dir="ltr">#{report.id}</bdi> },
     { id: "type", header: "النوع", cell: (report) => <span className={`reason-chip ${report.type === "احتيال" ? "critical" : ""}`}><Flag size={13} />{report.type}</span> },
     { id: "reporter", header: "المبلّغ", cell: (report) => report.reporter },
     { id: "listing", header: "الإعلان", cell: (report) => report.listing },
@@ -51,7 +51,7 @@ export function ReportsPage() {
       <PageHeader title="البلاغات ومكافحة الاحتيال" description="مراجعة بلاغات المستخدمين واتخاذ إجراءات موثقة ضد الإعلانات والحسابات المخالفة." />
       <div className="summary-strip"><span><strong>{reports.filter((report) => report.status === "open").length}</strong> بلاغات مفتوحة</span><span><strong>3</strong> عالية الأولوية</span><span><strong>{reports.filter((report) => report.status === "resolved").length}</strong> أغلقت هذا الأسبوع</span></div>
       <section className="card data-surface">
-        <div className="tabs-row"><button className={`tab-button ${status === "open" ? "active" : ""}`} onClick={() => table.setFilter("status", "open")} type="button">مفتوحة</button><button className={`tab-button ${status === "resolved" ? "active" : ""}`} onClick={() => table.setFilter("status", "resolved")} type="button">مغلقة</button><button className={`tab-button ${status === "all" ? "active" : ""}`} onClick={() => table.setFilter("status", "all")} type="button">الكل</button></div>
+        <div className="tabs-row" role="group" aria-label="تصفية البلاغات حسب الحالة"><button className={`tab-button ${status === "open" ? "active" : ""}`} aria-pressed={status === "open"} onClick={() => table.setFilter("status", "open")} type="button">مفتوحة</button><button className={`tab-button ${status === "resolved" ? "active" : ""}`} aria-pressed={status === "resolved"} onClick={() => table.setFilter("status", "resolved")} type="button">مغلقة</button><button className={`tab-button ${status === "all" ? "active" : ""}`} aria-pressed={status === "all"} onClick={() => table.setFilter("status", "all")} type="button">الكل</button></div>
         <DataTable caption="قائمة بلاغات الاحتيال والمحتوى" columns={columns} rows={rows} rowKey={(report) => report.id} emptyMessage="لا توجد بلاغات مطابقة للفلاتر الحالية." pagination={{ page, pageSize: table.pageSize, total: visible.length, pageSizeOptions: table.pageSizeOptions }} onPageChange={table.setPage} onPageSizeChange={table.setPageSize} toolbar={<div className="filters-row"><label className="field-with-icon"><Search size={16} /><input value={table.search} onChange={(event) => table.setSearch(event.target.value)} placeholder="بحث في البلاغات والأطراف" aria-label="البحث في البلاغات" /></label><span className="record-count">{visible.length} بلاغ</span></div>} />
       </section>
       <Drawer open={Boolean(selected)} title={selected ? `البلاغ #${selected.id}` : ""} onClose={() => setSelected(null)}>{selected && <div className="detail-stack">
