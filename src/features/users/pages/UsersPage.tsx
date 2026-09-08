@@ -7,7 +7,7 @@ import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../components/ui/DataTable";
 import { Drawer } from "../../../components/ui/Drawer";
 import { FormDialog, SubmitButton, TextareaField, ValidatedForm } from "../../../components/ui/forms";
-import { Modal } from "../../../components/ui/Modal";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
@@ -445,46 +445,31 @@ export function UsersPage() {
         )}
       </FormDialog>
 
-      <Modal
+      <ConfirmDialog
         open={Boolean(unbanTarget)}
         title="إلغاء حظر المستخدم"
+        intent="success"
+        icon={<Unlock aria-hidden="true" size={22} />}
+        description={
+          unbanTarget ? (
+            <p>
+              هل أنت متأكد من رغبتك في إلغاء حظر حساب «<strong>{unbanTarget.fullName}</strong>»؟
+            </p>
+          ) : undefined
+        }
+        consequence="سيتمكن المستخدم من تسجيل الدخول واستئناف استخدام المنصة فوراً."
+        confirmLabel="تأكيد إلغاء الحظر"
+        pendingLabel="جارٍ إلغاء الحظر…"
+        submitting={pending}
+        resource="users"
+        action="ban"
+        onConfirm={() => {
+          void handleUnban();
+        }}
         onClose={() => {
           if (!pending) setUnbanTarget(null);
         }}
-      >
-        <div className="form-confirmation">
-          <span className="form-confirmation-icon">
-            <Unlock aria-hidden="true" size={22} />
-          </span>
-          <p>
-            هل أنت متأكد من رغبتك في إلغاء حظر حساب «<strong>{unbanTarget?.fullName}</strong>»؟
-            سيتمكن المستخدم من تسجيل الدخول واستئناف استخدام المنصة فوراً.
-          </p>
-          <div className="modal-actions">
-            <button
-              className="button secondary"
-              type="button"
-              disabled={pending}
-              onClick={() => setUnbanTarget(null)}
-            >
-              إلغاء
-            </button>
-            <AuthorizedButton
-              resource="users"
-              action="ban"
-              className="button success-button"
-              type="button"
-              disabled={pending}
-              aria-busy={pending}
-              onClick={() => {
-                void handleUnban();
-              }}
-            >
-              {pending ? "جارٍ إلغاء الحظر…" : "تأكيد إلغاء الحظر"}
-            </AuthorizedButton>
-          </div>
-        </div>
-      </Modal>
+      />
     </>
   );
 }

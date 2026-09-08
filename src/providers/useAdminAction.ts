@@ -3,6 +3,7 @@ import { useInvalidate } from "@refinedev/core";
 const affectedResources = {
   village: ["villages", "regions"],
   region: ["regions", "villages"],
+  category: ["categories", "listings", "dashboard"],
   ban: ["users", "listings", "dashboard", "audit"],
   commission: ["commissions", "users", "dashboard", "audit"],
   report: ["reports", "dashboard", "audit"],

@@ -1,5 +1,5 @@
 import type { BaseRecord, DataProvider, GetListParams } from "@refinedev/core";
-import type { AdminServices, BanInput, CatalogService, ListFilter, ListOptions, ListSort, ModerationInput } from "../services/admin/contracts";
+import type { AdminServices, BanInput, BroadcastInput, CatalogService, ListFilter, ListOptions, ListSort, ModerationInput, SettingInput, SmsConfigurationInput, VerificationInput } from "../services/admin/contracts";
 import { entityId, invalidInput, unsupportedContract } from "../services/admin/validation";
 import { ApiError } from "../services/http";
 
@@ -40,6 +40,15 @@ export function createAdminDataProvider(services: AdminServices, apiUrl: string)
     getApiUrl: () => apiUrl,
     async getList<TData extends BaseRecord>(params: GetListParams) {
       const options = listOptions(params);
+      if (params.resource === "settings") {
+        if (options.filters?.length || options.sorters?.length || options.paginate !== false) return unsupportedContract();
+        const settings = await services.settings.list(context(params.meta));
+        return { data: settings.map((setting) => refineRecord<TData>({ ...setting, id: setting.id ?? setting.key })), total: settings.length };
+      }
+      if (params.resource === "audit") {
+        const result = await services.audit.list(options);
+        return { data: result.items.map((item) => refineRecord<TData>(item)), total: result.pagination.totalItems };
+      }
       const service = ["users", "commissions", "reports", "listings"].includes(params.resource)
         ? services[params.resource as "users" | "commissions" | "reports" | "listings"] : catalog(params.resource);
       const result = await service.list(options);
@@ -70,6 +79,17 @@ export function createAdminDataProvider(services: AdminServices, apiUrl: string)
         const result = await services.users.ban(numericId(id), variables as BanInput, context(meta));
         return { data: refineRecord({ id: numericId(id), ...result }) };
       }
+      if (resource === "commissions") {
+        const result = await services.commissions.verify(numericId(id), variables as VerificationInput, context(meta));
+        return { data: refineRecord(result) };
+      }
+      if (resource === "reports") {
+        const notes = typeof variables === "object" && variables !== null && "notes" in variables
+          ? String((variables as { notes: unknown }).notes)
+          : String(variables);
+        const result = await services.reports.resolve(numericId(id), notes, context(meta));
+        return { data: refineRecord({ id: numericId(id), ...result }) };
+      }
       return { data: refineRecord(await catalog(resource).update(numericId(id), variables, context(meta))) };
     },
     async deleteOne({ resource, id, meta }) {
@@ -80,10 +100,34 @@ export function createAdminDataProvider(services: AdminServices, apiUrl: string)
       }
       return { data: refineRecord(await catalog(resource).delete(numericId(id), context(meta))) };
     },
-    async custom({ url, method, meta }) {
+    async custom({ url, method, payload, meta }) {
       const normalizedUrl = url.replace(/^\/+|\/+$/g, "");
-      if (method !== "get" || normalizedUrl !== "admin/stats") return unsupportedContract();
-      return { data: refineRecord(await services.statistics.get(context(meta))) };
+      if (method === "get" && normalizedUrl === "admin/stats") {
+        return { data: refineRecord(await services.statistics.get(context(meta))) };
+      }
+      if (method === "post" && normalizedUrl === "admin/notifications/broadcast") {
+        const result = await services.broadcasts.send(payload as BroadcastInput, context(meta));
+        return { data: refineRecord({ id: "broadcast", ...result }) };
+      }
+      if (method === "get" && normalizedUrl === "admin/settings/sms") {
+        return { data: refineRecord({ id: "sms", ...await services.settings.getSms(context(meta)) }) };
+      }
+      if (method === "put" && normalizedUrl === "admin/settings/sms") {
+        return { data: refineRecord({ id: "sms", ...await services.settings.updateSms(payload as SmsConfigurationInput, context(meta)) }) };
+      }
+      if (method === "patch" && normalizedUrl === "admin/settings/otp") {
+        const enabled = typeof payload === "object" && payload !== null && "enabled" in payload
+          ? (payload as { enabled: unknown }).enabled
+          : undefined;
+        const result = await services.settings.setOtpEnabled(enabled as boolean, context(meta));
+        return { data: refineRecord({ id: "otp", ...result }) };
+      }
+      const settingMatch = /^admin\/settings\/([a-z][a-z0-9_]*)$/.exec(normalizedUrl);
+      if (method === "put" && settingMatch) {
+        const result = await services.settings.update(settingMatch[1], payload as SettingInput, context(meta));
+        return { data: refineRecord({ id: settingMatch[1], ...result }) };
+      }
+      return unsupportedContract();
     },
   };
 }
