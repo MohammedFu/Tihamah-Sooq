@@ -425,7 +425,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T23 - Complete categories management
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T03-T05, T10, T14-T15, T28
 - **Objective:** Manage Arabic category names, icons, ordering, and availability.
@@ -434,6 +434,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/categories/api/*`, components, schemas, `CategoriesPage.tsx`.
 - **Acceptance:** Reordering persists atomically or rolls back visually; duplicate Arabic names are prevented; inactive categories are clearly distinguished.
 - **Verification:** Ordering tests, validation tests, and create/edit/deactivate flows.
+- **Completion note (2026-09-08):** Connected `CategoriesPage` to Refine data provider via dedicated `useCategories` hook (`useList`, `useCreate`, `useUpdate`, `useDelete`) backed by `services.categories`. Created `categorySchema` with Arabic name validation (2–80 chars), URL validation for icons, non-negative integer sort ordering, and activation flag. Integrated system icon library (`PRESET_ICONS`) with preview and URL binding, plus custom icon URL support. Implemented bidirectional sequential reordering with optimistic visual stability and rollback on error. Added active status switch toggle and hard delete workflow with 409 conflict handling (preventing category deletion when active listings are linked). Added real-time category search filtering. Registered `category` resource invalidation across `categories`, `listings`, and `dashboard` queries. Unit tests, schema tests, page integration tests (17 tests in feature, 213 tests across full suite), and production build passed cleanly.
 
 ### T24 - Complete banner management
 
