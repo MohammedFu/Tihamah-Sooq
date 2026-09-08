@@ -22,6 +22,7 @@ import {
   type Permission,
   type Region,
   type Report,
+  type SmsConfiguration,
   type SystemSetting,
   type User,
   type UserDevice,
@@ -459,12 +460,43 @@ export function mapReport(value: unknown, path = "report"): Report {
 
 export function mapSystemSetting(value: unknown, path = "setting"): SystemSetting {
   const record = recordAt(value, path);
+  const key = required(record, "key", path, stringAt);
+  const rawValue = required(record, "value", path, stringAt);
+  const isSecret = /(?:^|_)(?:api_key|password|secret|token|private_key)(?:$|_)/i.test(key);
   return {
     id: optional(record, "id", path, entityIdAt),
-    key: required(record, "key", path, stringAt),
-    value: required(record, "value", path, stringAt),
+    key,
+    value: isSecret ? "" : rawValue,
     description: required(record, "description", path, stringAt),
     updatedAt: optional(record, "updated_at", path, isoDateAt),
+    isSecret,
+    hasValue: Boolean(rawValue),
+  };
+}
+
+function optionalSmsString(record: JsonRecord, key: string, path: string): string | null {
+  return optional(record, key, path, stringAt);
+}
+
+function optionalBooleanString(record: JsonRecord, key: string, path: string): boolean | null {
+  const value = record[key];
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value === "boolean") return value;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return fail(`${path}.${key}`, "a boolean or boolean string");
+}
+
+export function mapSmsConfiguration(value: unknown, path = "smsConfiguration"): SmsConfiguration {
+  const record = recordAt(value, path);
+  const apiKey = optionalSmsString(record, "sms_api_key", path);
+  return {
+    provider: required(record, "sms_provider", path, stringAt),
+    senderName: optionalSmsString(record, "sms_sender_name", path),
+    username: optionalSmsString(record, "sms_username", path),
+    userSender: optionalSmsString(record, "sms_user_sender", path),
+    hasApiKey: Boolean(apiKey),
+    otpEnabled: optionalBooleanString(record, "is_otp_enabled", path),
   };
 }
 

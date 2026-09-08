@@ -7,6 +7,17 @@ export type SystemSetting = Readonly<{
   value: string;
   description: string;
   updatedAt: IsoDateString | null;
+  isSecret: boolean;
+  hasValue: boolean;
+}>;
+
+export type SmsConfiguration = Readonly<{
+  provider: string;
+  senderName: string | null;
+  username: string | null;
+  userSender: string | null;
+  hasApiKey: boolean;
+  otpEnabled: boolean | null;
 }>;
 
 export type Notification = Readonly<{

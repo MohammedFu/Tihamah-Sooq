@@ -17,7 +17,7 @@ The detailed production roadmap and new-chat handoff are maintained in [`IMPLEME
 | `/locations` | Region and village hierarchy management |
 | `/categories` | Category ordering, icons, and availability |
 | `/banners` | Banner targeting, scheduling, and ordering |
-| `/system` | FCM notification broadcasts and append-only audit logs |
+| `/system` | Global notification broadcasts, OTP/SMS settings, and read-only audit visibility |
 
 ## Project Structure
 
@@ -91,4 +91,4 @@ Fixture mode accepts either documented identifier with the development-only pass
 | Phone | `+966500000000` |
 | Password | `Admin@123456` |
 
-The dashboard metrics and listing-moderation page now read their confirmed backend contracts through Refine in fixture or remote mode. Listing review includes server status/search/pagination/price sorting, media detail fallbacks, pessimistic moderation, and confirmed soft deletion; rejection-reason persistence remains visibly blocked by the current backend DTO. The remaining operational pages still use local typed fixtures for workflow review until T19–T25. See [the listing moderation guide](./docs/LISTING_MODERATION.md), [dashboard metrics guide](./docs/DASHBOARD_METRICS.md), and [administrative data contract](./docs/ADMIN_DATA.md). The next dependency-safe task is user management (T19).
+The dashboard metrics, listing moderation, and confirmed system operations read their backend contracts through Refine in fixture or remote mode. The system route supports global broadcast review, general and SMS settings, OTP confirmation, secret redaction, and a local read-only audit adapter; targeted broadcasts, live SMS tests, and remote audit listing remain visibly blocked by incomplete backend contracts. See [the system operations guide](./docs/SYSTEM_OPERATIONS.md), [listing moderation guide](./docs/LISTING_MODERATION.md), [dashboard metrics guide](./docs/DASHBOARD_METRICS.md), and [administrative data contract](./docs/ADMIN_DATA.md). Task status and the next dependency-safe step are tracked in [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md).

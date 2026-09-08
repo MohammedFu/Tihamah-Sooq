@@ -100,6 +100,42 @@ describe("explicit admin operations", () => {
     expect(fetcher).toHaveBeenCalledTimes(4);
   });
 
+  it("loads and updates SMS configuration without exposing a returned API secret", async () => {
+    const { fetcher, services } = setup();
+    fetcher.mockResolvedValueOnce(Response.json({
+      success: true,
+      data: [{ id: 1, key: "sms_api_key", value: "server-secret", description: "مفتاح الربط" }],
+    }));
+    const settings = await services.settings.list();
+    expect(settings[0]).toMatchObject({ key: "sms_api_key", value: "", isSecret: true, hasValue: true });
+    expect(JSON.stringify(settings)).not.toContain("server-secret");
+
+    fetcher.mockResolvedValueOnce(Response.json({ success: true, data: {
+      sms_provider: "taqnyat",
+      sms_api_key: "server-secret",
+      sms_sender_name: "TIHAMAH",
+      sms_username: "gateway-user",
+      sms_user_sender: "TIHAMAH",
+      is_otp_enabled: "true",
+    } }));
+    const sms = await services.settings.getSms();
+    expect(sms).toEqual({ provider: "taqnyat", senderName: "TIHAMAH", username: "gateway-user", userSender: "TIHAMAH", hasApiKey: true, otpEnabled: true });
+    expect(JSON.stringify(sms)).not.toContain("server-secret");
+
+    fetcher.mockResolvedValueOnce(Response.json({ success: true, data: {
+      sms_provider: "taqnyat",
+      sms_api_key: "replacement-secret",
+      sms_sender_name: "SOOQ",
+      sms_username: "gateway-user",
+      sms_user_sender: "SOOQ",
+      is_otp_enabled: false,
+    } }));
+    await services.settings.updateSms({ provider: "taqnyat", apiKey: " replacement-secret ", senderName: "SOOQ", username: "gateway-user", userSender: "SOOQ", otpEnabled: false });
+    expect(fetcher.mock.calls[2][0]).toBe("/api/v1/admin/settings/sms");
+    expect(fetcher.mock.calls[2][1]?.method).toBe("PUT");
+    expect(JSON.parse(String(fetcher.mock.calls[2][1]?.body))).toEqual({ sms_provider: "taqnyat", sms_api_key: "replacement-secret", sms_sender_name: "SOOQ", sms_username: "gateway-user", sms_user_sender: "SOOQ", is_otp_enabled: false });
+  });
+
   it("reflects fixture decisions in later reads while keeping audit records immutable and instances isolated", async () => {
     const services = createFixtureAdminServices();
     await services.users.ban(201, { isBanned: true, reason: "سبب الحظر" });
@@ -113,6 +149,9 @@ describe("explicit admin operations", () => {
     expect((await services.commissions.list()).items[0].status).toBe("rejected");
     await expect(services.commissions.verify(511, { status: "verified" })).rejects.toMatchObject({ kind: "conflict" });
     const audit = await services.audit.list();
+    expect((await services.audit.list({ filters: [{ field: "q", operator: "contains", value: "VERIFY_COMMISSION" }] })).items).toHaveLength(1);
+    expect((await services.audit.list({ filters: [{ field: "q", operator: "contains", value: "غير موجود" }] })).items).toEqual([]);
+    await expect(services.audit.list({ sorters: [{ field: "createdAt", order: "desc" }] })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
     await services.listings.moderate(1048, { status: "active" });
     expect((await services.statistics.get()).activeListings).toBe(1);
     await services.listings.delete(1048);

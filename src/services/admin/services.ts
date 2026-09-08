@@ -1,9 +1,9 @@
-import type { ApiBanUserRequest, ApiBatchUpdateSettingsRequest, ApiBroadcastNotificationRequest, ApiResolveReportRequest, ApiUpdateListingStatusRequest, ApiUpdateSettingRequest, ApiVerifyCommissionRequest } from "../../types/api";
+import type { ApiBanUserRequest, ApiBatchUpdateSettingsRequest, ApiBroadcastNotificationRequest, ApiResolveReportRequest, ApiSmsConfigurationRequest, ApiUpdateListingStatusRequest, ApiUpdateSettingRequest, ApiVerifyCommissionRequest } from "../../types/api";
 import type { ApiClient } from "../http";
 import { ApiError } from "../http";
 import type { AdminServices, CatalogService, ListOptions, LocalReviewServices, RequestContext } from "./contracts";
 import { catalogList, serverQuery, validateCatalogQuery } from "./listQuery";
-import { ContractMappingError, mapActionResponse, mapBanner, mapCategory, mapCommission, mapDashboardMetrics, mapListResponse, mapListing, mapPaginatedResponse, mapRegion, mapReport, mapSuccessResponse, mapSystemSetting, mapUser, mapVillage } from "./mappers";
+import { ContractMappingError, mapActionResponse, mapBanner, mapCategory, mapCommission, mapDashboardMetrics, mapListResponse, mapListing, mapPaginatedResponse, mapRegion, mapReport, mapSmsConfiguration, mapSuccessResponse, mapSystemSetting, mapUser, mapVillage } from "./mappers";
 import { bannerRequest, booleanInput, categoryRequest, entityId, inputRecord, invalidInput, missingRecord, regionRequest, textInput, unsupportedContract, villageRequest } from "./validation";
 
 export type ServiceOptions = Readonly<{
@@ -127,6 +127,25 @@ export function createAdminServices(client: ApiClient, options: ServiceOptions =
         }
         const body: ApiBatchUpdateSettingsRequest = { settings };
         return action("admin/settings", "put", body, context);
+      }),
+      getSms: (context) => run(context, async () => mapSuccessResponse(
+        await client.get<unknown>("admin/settings/sms", { signal: context?.signal }),
+        mapSmsConfiguration,
+      ).data),
+      updateSms: (value, context) => run(context, async () => {
+        const input = inputRecord(value, ["provider", "apiKey", "senderName", "username", "userSender", "otpEnabled"]);
+        const body = {
+          sms_provider: textInput(input.provider),
+          ...(input.apiKey === undefined ? {} : { sms_api_key: textInput(input.apiKey) }),
+          ...(input.senderName === undefined ? {} : { sms_sender_name: textInput(input.senderName, true) }),
+          ...(input.username === undefined ? {} : { sms_username: textInput(input.username, true) }),
+          ...(input.userSender === undefined ? {} : { sms_user_sender: textInput(input.userSender, true) }),
+          ...(input.otpEnabled === undefined ? {} : { is_otp_enabled: booleanInput(input.otpEnabled) }),
+        } satisfies ApiSmsConfigurationRequest;
+        return mapSuccessResponse(
+          await client.put<unknown>("admin/settings/sms", body, { signal: context?.signal }),
+          mapSmsConfiguration,
+        ).data;
       }),
       setOtpEnabled: (enabled, context) => run(context, () => action("admin/settings/otp", "patch", { is_otp_enabled: booleanInput(enabled) }, context)),
     },

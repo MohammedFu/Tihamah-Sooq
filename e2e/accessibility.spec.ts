@@ -69,9 +69,13 @@ test("keyboard focus is managed across route changes, the mobile menu, and syste
 
   await page.goto("/system", { waitUntil: "domcontentloaded" });
   const broadcastTab = page.getByRole("tab", { name: "بث الإشعارات" });
+  const settingsTab = page.getByRole("tab", { name: "إعدادات التشغيل" });
   const auditTab = page.getByRole("tab", { name: "سجل التدقيق" });
   await broadcastTab.focus();
   await page.keyboard.press("ArrowLeft");
+  await expect(settingsTab).toHaveAttribute("aria-selected", "true");
+  await expect(settingsTab).toBeFocused();
+  await page.keyboard.press("End");
   await expect(auditTab).toHaveAttribute("aria-selected", "true");
   await expect(auditTab).toBeFocused();
 });

@@ -125,6 +125,16 @@ export function createFixtureAdminServices(options: Pick<ServiceOptions, "assert
         if (index >= 0) state.settings[index] = { ...state.settings[index], ...record };
         else state.settings.push(record);
       };
+      const smsConfiguration = () => Object.fromEntries(
+        state.settings
+          .filter((row) => ["sms_provider", "sms_api_key", "sms_sender_name", "sms_username", "sms_user_sender", "is_otp_enabled"].includes(row.key))
+          .map((row) => [row.key, row.value]),
+      );
+      if (idText === "sms" && method === "GET") return ok(smsConfiguration());
+      if (idText === "sms" && method === "PUT") {
+        for (const [key, value] of Object.entries(body)) update(key, String(value));
+        return ok(smsConfiguration());
+      }
       if (method === "PUT" && !idText) {
         for (const [key, value] of Object.entries(body.settings as Record<string, string>)) update(key, value);
         return done();
@@ -142,8 +152,12 @@ export function createFixtureAdminServices(options: Pick<ServiceOptions, "assert
   };
   const localReview: LocalReviewServices = {
     audit: { async list(query = {}) {
-      if (query.filters?.length || query.sorters?.length) return unsupportedContract();
-      return paginate(state.audit.map((row) => ({ ...row })), query);
+      if (query.sorters?.length || (query.filters ?? []).some((filter) => filter.field !== "q" || !["eq", "contains"].includes(filter.operator) || typeof filter.value !== "string")) return unsupportedContract();
+      const search = String(query.filters?.find((filter) => filter.field === "q")?.value ?? "").trim().toLocaleLowerCase("ar");
+      const rows = search
+        ? state.audit.filter((row) => `${row.id} ${row.admin?.name ?? ""} ${row.action} ${row.entityType} ${row.entityId ?? ""} ${row.ipAddress}`.toLocaleLowerCase("ar").includes(search))
+        : state.audit;
+      return paginate(rows.map((row) => ({ ...row })), query);
     } },
   };
   return createAdminServices(new ApiClient({ baseUrl: "/api/v1", timeoutMs: 15000, fetcher }), { ...options, localReview });

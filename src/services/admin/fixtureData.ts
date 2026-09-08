@@ -101,7 +101,15 @@ export function createAdminFixtureData(): AdminFixtureData {
       status: "open",
       created_at: fixtureDate,
     }],
-    settings: [{ id: 1, key: "commission_percentage", value: "1.0", description: "نسبة عمولة المنصة" }, { id: 2, key: "is_otp_enabled", value: "false", description: "إرسال رمز التحقق" }],
+    settings: [
+      { id: 1, key: "commission_percentage", value: "1.0", description: "نسبة عمولة المنصة" },
+      { id: 2, key: "is_otp_enabled", value: "false", description: "إرسال رمز التحقق" },
+      { id: 3, key: "sms_provider", value: "taqnyat", description: "مزود بوابة الرسائل" },
+      { id: 4, key: "sms_api_key", value: "fixture-secret-key", description: "مفتاح ربط بوابة الرسائل" },
+      { id: 5, key: "sms_sender_name", value: "TIHAMAH", description: "اسم مرسل الرسائل" },
+      { id: 6, key: "sms_username", value: "tihamah_sms", description: "اسم مستخدم بوابة الرسائل" },
+      { id: 7, key: "sms_user_sender", value: "TIHAMAH", description: "معرّف مرسل المستخدم" },
+    ],
     audit: [{ id: 9912, adminId: 1, admin: null, action: "VERIFY_COMMISSION", entityType: "commission", entityId: 508, metadata: null, ipAddress: "192.0.2.1", createdAt: fixtureDate }],
   };
 }

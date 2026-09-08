@@ -1,4 +1,4 @@
-import type { AdminAuditRecord, Banner, Category, Commission, DashboardMetrics, Listing, PaginatedResult, Region, Report, SystemSetting, User, Village } from "../../types/domain";
+import type { AdminAuditRecord, Banner, Category, Commission, DashboardMetrics, Listing, PaginatedResult, Region, Report, SmsConfiguration, SystemSetting, User, Village } from "../../types/domain";
 
 export type RequestContext = Readonly<{ signal?: AbortSignal }>;
 export type ListFilter = Readonly<{ field: string; operator: "eq" | "contains"; value: string | number | boolean }>;
@@ -20,6 +20,14 @@ export type VerificationInput = Readonly<{ status: "verified" | "rejected"; note
 export type ModerationInput = Readonly<{ status: "active" | "rejected"; reason?: string }>;
 export type BroadcastInput = Readonly<{ title: string; body: string; audience: "all" | "region" | "village"; targetId?: number }>;
 export type SettingInput = Readonly<{ value: string; description?: string }>;
+export type SmsConfigurationInput = Readonly<{
+  provider: string;
+  apiKey?: string;
+  senderName?: string;
+  username?: string;
+  userSender?: string;
+  otpEnabled?: boolean;
+}>;
 
 export interface CatalogService<T extends { id: number }, TInput> {
   list(options?: ListOptions): Promise<PaginatedResult<T>>;
@@ -57,6 +65,8 @@ export interface AdminServices {
     list(context?: RequestContext): Promise<readonly SystemSetting[]>;
     update(key: string, input: SettingInput, context?: RequestContext): Promise<ActionResult>;
     updateBatch(settings: Readonly<Record<string, string>>, context?: RequestContext): Promise<ActionResult>;
+    getSms(context?: RequestContext): Promise<SmsConfiguration>;
+    updateSms(input: SmsConfigurationInput, context?: RequestContext): Promise<SmsConfiguration>;
     setOtpEnabled(enabled: boolean, context?: RequestContext): Promise<ActionResult>;
   };
   audit: { list(options?: ListOptions): Promise<PaginatedResult<AdminAuditRecord>> };

@@ -61,14 +61,14 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 8. T05 confirmed that category/region/village/banner collections are unpaginated and expose no GET-by-ID operation. The provider derives detail reads, filters, sorting, and pagination from complete collections; only the documented village `region_id` filter is sent remotely. Do not invent detail or server-sort routes in T22–T24.
 9. T05 found that Swagger references `dto.VerifyCommissionRequest` without defining it and Postman supplies `{}`. The detailed API guide confirms `{ "status": "verified" }` only. Remote verification therefore permits that payload; rejection and notes remain in local-review mode pending T20 contract confirmation. The shared request type retains them for fixture use.
 10. The executable user-list contract supports `q` and `is_banned`; commission/report lists support `status`, and all three support `page`/`limit`. User geographic filters, report-type filters, and server sorting are not confirmed. T19–T21 must confirm them before enabling remote controls.
-11. Swagger references an absent `dto.TestSMSRequest` and Postman supplies `{}`. T25 must confirm the SMS test body. T05 implements settings list/single/batch/OTP operations; SMS gateway UI integration remains in T25.
+11. Swagger references an absent `dto.TestSMSRequest` and Postman supplies `{}`. T25 connected the confirmed SMS configuration GET/PUT routes with secret redaction, but leaves the SMS test visibly disabled until its request body is confirmed.
 12. T09 confirmed that Swagger's `models.Admin` response does not include a nested role or avatar, while `marketplace_models-v2.go` defines `Role` with `omitempty`. The account UI uses the role only when returned, shows a neutral fallback otherwise, and derives deterministic initials instead of inventing an avatar or profile endpoint.
 13. The dashboard analysis names `/api/v1/admin/dashboard/stats`, Redis caching, and richer growth/OTP counters. The executable router, handler, DTO, Swagger, and Postman instead confirm `GET /api/v1/admin/stats` with eight aggregate fields, no server timestamp, and no confirmed queue-summary route. T17 uses the executable contract, treats extensions as unavailable when omitted, and reports only client fetch freshness.
 14. T18 confirmed that the executable ad repository defaults an omitted `status` to `active`, so it cannot provide a trustworthy all-status page. `dto.UpdateAdStatusRequest` accepts only `status`; rejection reason, moderator/timestamp metadata, record versions/conditional writes, and restore-after-delete are absent. The dashboard uses one explicit status at a time, requires but does not claim to persist a rejection reason, and labels DELETE as soft-delete/hide. The live Swagger document does not currently publish the registered admin-ad routes and should be regenerated.
 
 ## 5. Current Baseline
 
-As of 2026-09-07:
+As of 2026-09-09:
 
 - The React/TypeScript/Vite/Refine project exists independently in `D:\dashboard\Tihamah-Sooq`.
 - The application has an Arabic RTL responsive shell, sidebar, header, badges, drawers, modals, toasts, and shared styling.
@@ -79,7 +79,7 @@ As of 2026-09-07:
 - Administrator login, session-scoped persistence, expiry validation, logout, protected routing, dynamic RBAC, and dedicated authentication/authorization recovery states are implemented and covered by focused Vitest and Playwright tests. Broader production API integration, remaining domain coverage, and deployment automation remain.
 - `src/data/adminFixtures.ts` is temporary review data, not a production data layer.
 - The dashboard design system now follows `Notebook/design-system.pdf`: its exact Rural palette is exposed through semantic tokens, Tajawal is self-hosted across the required weights, and the mobile component language is extended consistently to desktop navigation, data surfaces, tables, drawers, dialogs, and system states. The mapping and contribution rules are documented in `docs/DESIGN_SYSTEM.md`.
-- T05 registers a session-guarded Refine data provider and typed fixture/remote admin services. T17 dashboard statistics and the confirmed portion of T18 listing moderation now read through it; the remaining operational pages require their T19–T25 integrations. Provider fixtures use a separate isolated in-memory store. Contracts and cache usage are documented in `docs/ADMIN_DATA.md`.
+- T05 registers a session-guarded Refine data provider and typed fixture/remote admin services. Dashboard statistics, listing moderation, user, commission, report, hierarchy, category, and the confirmed system-operation workflows now read through it; T24 remains dependent on T28 media work. Provider fixtures use a separate isolated in-memory store. Contracts and cache usage are documented in `docs/ADMIN_DATA.md`.
 - T18 now reads status-scoped paginated admin ads through Refine and uses confirmed status and soft-delete routes. Complete list rows drive the media/detail drawer, and mutations are pessimistic and permission-gated. Rejection-reason persistence, all-status listing, moderation attribution, and stale-write protection remain backend gaps documented in `docs/LISTING_MODERATION.md`.
 - The header now uses the administrator identity stored from the confirmed login response. Its accessible account disclosure shows role/contact/session-expiry details, handles missing identity fields safely, and provides keyboard-accessible logout without rendering tokens. Details are documented in `docs/ADMIN_IDENTITY.md`.
 - Shared form infrastructure now uses React Hook Form and Zod, accessible field/error primitives, mutation submission locking, focus-contained/restoring dialogs, dirty-close confirmation, and Refine route/unload warnings. The locations editor is the first integrated reference; remaining page forms migrate with T18-T25. Details are documented in `docs/FORMS.md`.
@@ -450,7 +450,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T25 - Complete notifications, settings, and audit logs
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T03-T05, T10, T13-T15
 - **Objective:** Finish the system screen around broadcasts, OTP/SMS operational controls, and immutable audit visibility.
@@ -459,6 +459,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/system/api/*`, components, schemas, `SystemPage.tsx`.
 - **Acceptance:** Broadcast cannot double-submit; destructive settings changes are permission-gated; secrets are never returned or rendered in full; audit records are read-only.
 - **Verification:** Broadcast/settings service tests and audit filtering tests.
+- **Completion note (2026-09-09):** Connected the system route to Refine and the confirmed notification/settings contracts. Global broadcasts now validate and trim input, show a review summary with a clearly labelled account estimate, submit pessimistically once, and report only server acknowledgement. General settings, SMS configuration, and OTP mode are permission-gated; SMS/API-key values are redacted before reaching the page and blank secret edits preserve the current key. Targeted broadcasts and SMS testing remain visibly unavailable because their DTO fields are unconfirmed. Audit records use a paginated/searchable read-only fixture adapter and fail closed in remote mode because no audit-list endpoint exists. Added schemas, service/provider/component coverage, system operations documentation, and keyboard-tab coverage. The focused suite passed 42 tests, the full Vitest suite passed 231 tests, TypeScript lint/typecheck passed, and the production build passed with the existing chunk-size advisory.
 
 ## 12. Phase 5: Security And Data Integrity
 
