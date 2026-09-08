@@ -16,6 +16,7 @@ import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../components/ui/DataTable";
 import { Drawer } from "../../../components/ui/Drawer";
 import { FormDialog, SelectField, SubmitButton, TextareaField, ValidatedForm } from "../../../components/ui/forms";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
@@ -500,49 +501,30 @@ export function CommissionsPage() {
         )}
       </Drawer>
 
-      <Modal
+      <ConfirmDialog
         open={Boolean(approving)}
         title="تأكيد اعتماد سداد العمولة"
-        onClose={() => {
-          if (!pending) setApproving(null);
-        }}
-      >
-        {approving && (
-          <div className="form-confirmation">
-            <span className="form-confirmation-icon" style={{ background: "var(--color-success-soft)", color: "var(--color-success)" }}>
-              <Check aria-hidden="true" size={22} />
-            </span>
+        intent="success"
+        icon={<Check aria-hidden="true" size={22} />}
+        description={
+          approving ? (
             <p>
               هل أنت متأكد من اعتماد سداد الفاتورة <strong>#{approving.id}</strong> بمبلغ{" "}
               <strong>{formatCurrency(approving.amount)}</strong>؟
-              سيتم تحديث حالة العمولة إلى معتمدة رسمياً وإشعار البائع عبر النظام.
             </p>
-            <div className="modal-actions">
-              <button
-                className="button secondary"
-                type="button"
-                disabled={pending}
-                onClick={() => setApproving(null)}
-              >
-                إلغاء
-              </button>
-              <AuthorizedButton
-                resource="commissions"
-                action="verify"
-                className="button success-button"
-                type="button"
-                disabled={pending}
-                aria-busy={pending}
-                onClick={() => {
-                  void handleVerify(approving);
-                }}
-              >
-                {pending ? "جارٍ الاعتماد…" : "تأكيد الاعتماد"}
-              </AuthorizedButton>
-            </div>
-          </div>
-        )}
-      </Modal>
+          ) : undefined
+        }
+        consequence="سيتم تحديث حالة العمولة إلى معتمدة رسمياً وإشعار البائع عبر النظام."
+        confirmLabel="تأكيد الاعتماد"
+        pendingLabel="جارٍ الاعتماد…"
+        submitting={pending}
+        resource="commissions"
+        action="verify"
+        onConfirm={() => {
+          if (approving) void handleVerify(approving);
+        }}
+        onClose={() => setApproving(null)}
+      />
 
       <FormDialog
         open={Boolean(rejecting)}

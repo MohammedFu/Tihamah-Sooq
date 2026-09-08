@@ -18,7 +18,7 @@ import {
   TextField,
   ValidatedForm,
 } from "../../../components/ui/forms";
-import { Modal } from "../../../components/ui/Modal";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
@@ -613,7 +613,7 @@ export function LocationsPage() {
       </FormDialog>
 
       {/* Delete Confirmation Modal */}
-      <Modal
+      <ConfirmDialog
         open={Boolean(deleteTarget)}
         title={
           deleteTarget?.type === "region"
@@ -622,79 +622,52 @@ export function LocationsPage() {
               : "حذف المنطقة الجغرافية"
             : "حذف القرية الريفية"
         }
-        onClose={closeDeleteModal}
-      >
-        <div className="form-confirmation">
-          <span className="form-confirmation-icon">
-            <Trash2 aria-hidden="true" size={22} />
-          </span>
-
-          {deleteTarget?.type === "region" && (
-            <>
-              {(deleteTarget.region.villages?.length ?? 0) > 0 ? (
-                <div>
-                  <p>
-                    لا يمكن حذف المنطقة «<strong>{deleteTarget.region.name}</strong>» لوجود{" "}
-                    <strong>{deleteTarget.region.villages.length}</strong> قرى تابعة لها.
-                  </p>
-                  <p className="block-copy text-muted" style={{ marginTop: "8px" }}>
-                    يجب حذف أو نقل جميع القرى التابعة أولاً لمنع تعليق بيانات الإعلانات والمستخدمين.
-                  </p>
-                </div>
-              ) : (
+        intent={
+          deleteTarget?.type === "region" && (deleteTarget.region.villages?.length ?? 0) > 0
+            ? "warning"
+            : "danger"
+        }
+        icon={<Trash2 aria-hidden="true" size={22} />}
+        hideConfirm={deleteTarget?.type === "region" && (deleteTarget.region.villages?.length ?? 0) > 0}
+        cancelLabel={
+          deleteTarget?.type === "region" && (deleteTarget.region.villages?.length ?? 0) > 0
+            ? "إغلاق"
+            : "إلغاء"
+        }
+        confirmLabel="تأكيد الحذف"
+        pendingLabel="جارٍ الحذف…"
+        submitting={isPending}
+        resource={deleteTarget?.type === "region" ? "regions" : "villages"}
+        action="delete"
+        error={actionError}
+        description={
+          deleteTarget?.type === "region" ? (
+            (deleteTarget.region.villages?.length ?? 0) > 0 ? (
+              <div>
                 <p>
-                  هل أنت متأكد من رغبتك في حذف المنطقة «
-                  <strong>{deleteTarget.region.name}</strong>»؟ لا يمكن التراجع عن هذا الإجراء.
+                  لا يمكن حذف المنطقة «<strong>{deleteTarget.region.name}</strong>» لوجود{" "}
+                  <strong>{deleteTarget.region.villages.length}</strong> قرى تابعة لها.
                 </p>
-              )}
-            </>
-          )}
-
-          {deleteTarget?.type === "village" && (
+                <p className="block-copy text-muted" style={{ marginTop: "8px" }}>
+                  يجب حذف أو نقل جميع القرى التابعة أولاً لمنع تعليق بيانات الإعلانات والمستخدمين.
+                </p>
+              </div>
+            ) : (
+              <p>
+                هل أنت متأكد من رغبتك في حذف المنطقة «
+                <strong>{deleteTarget.region.name}</strong>»؟ لا يمكن التراجع عن هذا الإجراء.
+              </p>
+            )
+          ) : deleteTarget?.type === "village" ? (
             <p>
               هل أنت متأكد من رغبتك في حذف قرية «<strong>{deleteTarget.village.name}</strong>»
               التابعة لمنطقة «<strong>{deleteTarget.regionName}</strong>»؟
             </p>
-          )}
-
-          {actionError && (
-            <div className="alert-box danger" role="alert" style={{ marginTop: "12px", width: "100%" }}>
-              <Info aria-hidden="true" size={18} />
-              <p>{actionError}</p>
-            </div>
-          )}
-
-          <div className="modal-actions">
-            <button
-              className="button secondary"
-              type="button"
-              disabled={isPending}
-              onClick={closeDeleteModal}
-            >
-              {deleteTarget?.type === "region" && (deleteTarget.region.villages?.length ?? 0) > 0
-                ? "إغلاق"
-                : "إلغاء"}
-            </button>
-
-            {!(
-              deleteTarget?.type === "region" &&
-              (deleteTarget.region.villages?.length ?? 0) > 0
-            ) && (
-              <AuthorizedButton
-                resource={deleteTarget?.type === "region" ? "regions" : "villages"}
-                action="delete"
-                className="button danger-button"
-                type="button"
-                disabled={isPending}
-                aria-busy={isPending}
-                onClick={() => void handleDeleteConfirm()}
-              >
-                {isPending ? "جارٍ الحذف…" : "تأكيد الحذف"}
-              </AuthorizedButton>
-            )}
-          </div>
-        </div>
-      </Modal>
+          ) : undefined
+        }
+        onConfirm={() => void handleDeleteConfirm()}
+        onClose={closeDeleteModal}
+      />
     </>
   );
 }

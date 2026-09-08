@@ -464,7 +464,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T26 - Standardize high-risk confirmations
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T14-T15
 - **Objective:** Prevent accidental destructive, financial, and access-control actions.
@@ -472,6 +472,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/components/ui/ConfirmDialog.tsx`, affected feature actions.
 - **Acceptance:** Escape/cancel never submits; repeated clicks do not duplicate requests; irreversible actions are visually distinct but not sensationalized.
 - **Verification:** Component tests and rapid-click mutation tests.
+- **Completion note (2026-09-08):** Created domain-neutral, highly accessible `src/components/ui/ConfirmDialog.tsx` supporting 4 distinct visual intents (`danger`, `warning`, `success`, `info`) with appropriate iconography. Implemented double-click and in-flight submission locking (`isBusy`, `aria-busy`) blocking concurrent mutation dispatches. Ensured keyboard and focus safety: Escape and backdrop clicks never submit and are blocked while mutations are in-flight; autofocus defaults safely to the Cancel button on destructive actions to prevent accidental Enter submission. Added typed confirmation keyword matching (`confirmTextMatch`) for catastrophic actions and mandatory reason validation (`reasonConfig`) with accessible `role="alert"` error announcements. Integrated Refine RBAC permissions via `AuthorizedButton`. Migrated high-risk actions across `ListingsPage` (soft deletion), `CategoriesPage` (category deletion), `CommissionsPage` (payment verification), `LocationsPage` (region/village deletion and child-dependency advisory dialog), and `UsersPage` (account unban). Authored comprehensive architecture invariants guide in `docs/CONFIRMATIONS.md`. All unit tests (`ConfirmDialog.test.tsx` with 9 tests) and feature test suites passed cleanly with 0 TypeScript errors.
 
 ### T27 - Attach audit metadata to mutations
 

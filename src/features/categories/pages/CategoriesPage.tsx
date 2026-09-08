@@ -23,7 +23,7 @@ import {
   TextField,
   ValidatedForm,
 } from "../../../components/ui/forms";
-import { Modal } from "../../../components/ui/Modal";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
@@ -558,17 +558,13 @@ export function CategoriesPage() {
       </FormDialog>
 
       {/* Delete Confirmation Modal */}
-      <Modal
+      <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="حذف القسم"
-        onClose={closeDeleteModal}
-      >
-        <div className="form-confirmation">
-          <span className="form-confirmation-icon">
-            <Trash2 aria-hidden="true" size={22} />
-          </span>
-
-          <div>
+        intent="danger"
+        icon={<Trash2 aria-hidden="true" size={22} />}
+        description={
+          <>
             <p>
               هل أنت متأكد من رغبتك في حذف قسم «<strong>{deleteTarget?.name}</strong>»؟
             </p>
@@ -576,38 +572,17 @@ export function CategoriesPage() {
               تحذير: لا يمكن التراجع عن هذا الإجراء. ستفشل عملية الحذف إذا كانت هناك إعلانات
               نشطة أو سابقة مرتبطة بهذا القسم في قاعدة البيانات.
             </p>
-          </div>
-
-          {actionError && (
-            <div className="alert-box danger" role="alert" style={{ marginTop: "12px", width: "100%" }}>
-              <Info aria-hidden="true" size={18} />
-              <p>{actionError}</p>
-            </div>
-          )}
-
-          <div className="modal-actions">
-            <button
-              className="button secondary"
-              type="button"
-              disabled={isPending}
-              onClick={closeDeleteModal}
-            >
-              إلغاء
-            </button>
-            <AuthorizedButton
-              resource="categories"
-              action="delete"
-              className="button danger-button"
-              type="button"
-              disabled={isPending}
-              aria-busy={isPending}
-              onClick={() => void handleDeleteConfirm()}
-            >
-              {isPending ? "جارٍ الحذف…" : "تأكيد الحذف"}
-            </AuthorizedButton>
-          </div>
-        </div>
-      </Modal>
+          </>
+        }
+        error={actionError}
+        confirmLabel="تأكيد الحذف"
+        pendingLabel="جارٍ الحذف…"
+        submitting={isPending}
+        resource="categories"
+        action="delete"
+        onConfirm={() => void handleDeleteConfirm()}
+        onClose={closeDeleteModal}
+      />
     </>
   );
 }

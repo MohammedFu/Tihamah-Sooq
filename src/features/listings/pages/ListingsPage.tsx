@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../components/ui/DataTable";
 import { Drawer } from "../../../components/ui/Drawer";
-import { Modal } from "../../../components/ui/Modal";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { FormDialog, SelectField, SubmitButton, TextareaField, ValidatedForm } from "../../../components/ui/forms";
@@ -182,9 +182,22 @@ export function ListingsPage() {
         </ValidatedForm>}
       </FormDialog>
 
-      <Modal open={Boolean(deleting)} title="إخفاء الإعلان" onClose={() => { if (!pending) setDeleting(null); }}>
-        <div className="form-confirmation"><span className="form-confirmation-icon"><Trash2 aria-hidden="true" size={22} /></span><p>سيُحذف الإعلان حذفاً لطيفاً ويختفي من القوائم العامة. لا يؤكد العقد الحالي إمكانية استعادته من لوحة التحكم.</p><div className="modal-actions"><button className="button secondary" type="button" disabled={pending} onClick={() => setDeleting(null)}>إلغاء</button><AuthorizedButton resource="listings" action="delete" className="button danger-button" type="button" disabled={pending} aria-busy={pending} onClick={() => { void deleteListing(); }}>{pending ? "جارٍ الإخفاء…" : "تأكيد الإخفاء"}</AuthorizedButton></div></div>
-      </Modal>
+      <ConfirmDialog
+        open={Boolean(deleting)}
+        title="إخفاء الإعلان"
+        intent="danger"
+        icon={<Trash2 aria-hidden="true" size={22} />}
+        entityName={deleting?.title}
+        entityType="الإعلان"
+        description="سيُحذف الإعلان حذفاً لطيفاً ويختفي من القوائم العامة. لا يؤكد العقد الحالي إمكانية استعادته من لوحة التحكم."
+        confirmLabel="تأكيد الإخفاء"
+        pendingLabel="جارٍ الإخفاء…"
+        submitting={pending}
+        resource="listings"
+        action="delete"
+        onConfirm={() => deleteListing()}
+        onClose={() => setDeleting(null)}
+      />
     </>
   );
 }
