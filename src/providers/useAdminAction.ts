@@ -8,6 +8,7 @@ const affectedResources = {
   commission: ["commissions", "users", "dashboard", "audit"],
   report: ["reports", "dashboard", "audit"],
   listing: ["listings", "dashboard", "audit"],
+  banner: ["banners", "dashboard"],
   broadcast: ["audit"],
   settings: ["settings", "dashboard", "audit"],
 } as const;

@@ -65,6 +65,7 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 12. T09 confirmed that Swagger's `models.Admin` response does not include a nested role or avatar, while `marketplace_models-v2.go` defines `Role` with `omitempty`. The account UI uses the role only when returned, shows a neutral fallback otherwise, and derives deterministic initials instead of inventing an avatar or profile endpoint.
 13. The dashboard analysis names `/api/v1/admin/dashboard/stats`, Redis caching, and richer growth/OTP counters. The executable router, handler, DTO, Swagger, and Postman instead confirm `GET /api/v1/admin/stats` with eight aggregate fields, no server timestamp, and no confirmed queue-summary route. T17 uses the executable contract, treats extensions as unavailable when omitted, and reports only client fetch freshness.
 14. T18 confirmed that the executable ad repository defaults an omitted `status` to `active`, so it cannot provide a trustworthy all-status page. `dto.UpdateAdStatusRequest` accepts only `status`; rejection reason, moderator/timestamp metadata, record versions/conditional writes, and restore-after-delete are absent. The dashboard uses one explicit status at a time, requires but does not claim to persist a rejection reason, and labels DELETE as soft-delete/hide. The live Swagger document does not currently publish the registered admin-ad routes and should be regenerated.
+15. Swagger confirms `POST /api/v1/media/presign` with `{ filename, media_type }` and top-level `upload_url`/`media_url`, but Postman authenticates it with `client_token`; administrator-token authorization is not explicitly confirmed. The documents also omit the direct object-storage method and required signed headers. T28 isolates conventional S3 `PUT` behavior behind an injectable transport and must not wire remote feature uploads until both details are confirmed.
 
 ## 5. Current Baseline
 
@@ -438,7 +439,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T24 - Complete banner management
 
-- **Status:** PARTIAL
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T03-T05, T10, T14-T15, T28
 - **Objective:** Schedule and target promotional banners while showing an accurate mobile-oriented preview.
@@ -447,6 +448,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/features/banners/api/*`, components, schemas, `BannersPage.tsx`.
 - **Acceptance:** End date cannot precede start date; target IDs are validated; failed saves retain selected media and form values; expired banners cannot appear active.
 - **Verification:** Date/target validation tests and create/edit/reorder flows.
+- **Completion note (2026-09-08):** Connected `BannersPage` to Refine data provider via dedicated `useBanners` hook (`useList`, `useCreate`, `useUpdate`, `useDelete`) backed by `services.banners`. Registered `banner` resource invalidation across `banners` and `dashboard` queries in `useAdminAction`. Created Zod `bannerSchema` enforcing valid image URLs, non-negative integer sort ordering, target ID validation for category/listing targets, and date range integrity ensuring end date cannot precede start date. Added `getBannerLifecycleState` helper and updated `StatusBadge` with `scheduled` ("مجدول") and `expired` ("منتهي") statuses, enforcing that expired banners cannot appear active. Designed mobile-oriented 16:6 banner preview cards, live thumbnail preview in editor, quick demo presets, bidirectional reordering (`ChevronUp`/`ChevronDown`), accessible toggle switch (`role="switch"`), search filtering, and safe deletion via `ConfirmDialog` (`intent="danger"`). Preserved form values and selected media upon mutation failure. All schema unit tests (9 tests), page integration tests (10 tests), and TypeScript build (`npx tsc -b`) passed cleanly.
 
 ### T25 - Complete notifications, settings, and audit logs
 
@@ -488,7 +490,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T28 - Secure media uploads
 
-- **Status:** TODO
+- **Status:** PARTIAL
 - **Priority:** P0
 - **Depends on:** T02-T04
 - **Objective:** Validate and upload banner/category/receipt media without routing large files through unsuitable endpoints.
@@ -496,6 +498,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/services/admin/media.ts`, `src/components/ui/forms/MediaUpload.tsx`.
 - **Acceptance:** Invalid files are rejected before upload; URLs are accepted only from configured media hosts; cancelled uploads do not submit stale URLs.
 - **Verification:** File-validation unit tests and mocked upload lifecycle tests.
+- **Progress note (2026-09-09):** Added a feature-neutral media service and accessible controlled `MediaUpload` component without modifying the concurrently developed T24 banner files. Preflight validation now checks safe filenames, non-empty/maximum size, MIME-extension-file-signature agreement, decoded image/video dimensions, decompression bounds, and the documented 30-second video limit before requesting `POST /media/presign`. Final public URLs require the configured HTTPS media origin/path and cannot contain signed query data; presigned storage URLs stay inside an injectable XHR transport that never copies authorization headers. The component provides progress, cancellation, retry, controlled final-URL emission, and generation guards against late stale completions. Added `docs/MEDIA_UPLOADS.md` plus nine passing service/component tests. TypeScript and a production build passed during the T28 implementation; the latest combined full-suite check reached 257/259 tests with only two failures in Antigravity's in-progress T24 banner schema, and the latest combined typecheck is likewise blocked only by its banner form/schema resolver mismatch. T28 remains PARTIAL pending confirmation of administrator authorization and direct-storage method/headers, followed by feature wiring.
 
 ### T29 - Mask sensitive operational data
 
