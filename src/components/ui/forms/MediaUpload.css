@@ -1,0 +1,106 @@
+.media-upload {
+  display: grid;
+  gap: 8px;
+}
+
+.media-upload-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-control);
+  padding: 13px;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-body);
+  cursor: pointer;
+}
+
+.media-upload-picker:focus-within {
+  border-color: var(--color-focus);
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.media-upload-picker[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: .65;
+}
+
+.media-upload-picker > span:not(.media-upload-icon),
+.media-upload-file > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.media-upload-picker strong,
+.media-upload-file strong {
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+
+.media-upload-picker small,
+.media-upload-file small,
+.media-upload-hint {
+  color: var(--color-text-subtle);
+  font-size: 9px;
+}
+
+.media-upload-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.media-upload-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--radius-control);
+  background: var(--color-info-soft);
+  color: var(--color-primary);
+}
+
+.media-upload-file {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 10px 11px;
+}
+
+.media-upload-success {
+  color: var(--color-success);
+}
+
+.media-upload-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.media-upload-progress progress {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 7px;
+  accent-color: var(--color-secondary);
+}
+
+.media-upload-action {
+  justify-self: start;
+}
+
+.media-upload .form-field-error {
+  color: var(--color-danger);
+  font-size: 9px;
+  font-weight: 500;
+}

@@ -51,7 +51,7 @@ Catalog fields support `eq`; textual `name` also supports `contains`. Sortable/f
 
 Refine `pagination.currentPage` is one-based. Default page size is 20. `mode: "off"` and `mode: "client"` return the complete filtered catalog, leaving client pagination to Refine. These modes and sorting are rejected for server-paginated resources, because fetching every server page or sorting only a partial page would produce misleading results. User region/village filters and report type filters require backend confirmation before their page tasks enable them.
 
-Services accept `signal` in their request context; Refine callers can supply `meta: { signal }`. Request IDs must be positive safe integers; numeric Refine string IDs are normalized without permitting arbitrary path segments. Media inputs accept HTTP(S) URLs; configured-host/file validation and upload lifecycle remain T28.
+Services accept `signal` in their request context; Refine callers can supply `meta: { signal }`. Request IDs must be positive safe integers; numeric Refine string IDs are normalized without permitting arbitrary path segments. The T28 media boundary now validates files before I/O, confines presigned URLs to an injectable transport, accepts final URLs only from `VITE_MEDIA_HOST`, and prevents cancelled operations from emitting stale values. Admin-token authorization and the direct-storage method/headers still require backend confirmation before feature wiring. See [the secure media upload guide](./MEDIA_UPLOADS.md).
 
 ## Business actions and incomplete contracts
 

@@ -66,7 +66,7 @@ Local development uses fixture mode when no environment file is present. Use [`.
 | `VITE_API_MODE` | Staging/production | `fixture` for local review or `remote` for the live admin API |
 | `VITE_API_URL` | Remote mode | Absolute HTTP(S) URL or root-relative API base path ending in `/api/v1` |
 | `VITE_REQUEST_TIMEOUT_MS` | No | Request timeout from 1,000 to 120,000 ms; defaults to 15,000 |
-| `VITE_MEDIA_HOST` | No | Trusted absolute HTTP(S) origin/base path for public media |
+| `VITE_MEDIA_HOST` | Media uploads | Trusted HTTPS origin/base path for final public media URLs |
 | `VITE_APP_ENV` | No | `development`, `staging`, `production`, or `test`; defaults from the Vite mode |
 
 Deployed staging and production environments must select an API mode explicitly. Invalid values render an actionable startup configuration screen rather than allowing a partially configured dashboard to run.
