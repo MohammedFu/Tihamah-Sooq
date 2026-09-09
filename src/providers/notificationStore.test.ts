@@ -37,4 +37,20 @@ describe("notification store", () => {
     await expect(store.trackPromise(() => Promise.reject(failure), { progress: "جارٍ الإرسال", success: "تم الإرسال", error: (error) => error === failure ? "تعذر الاتصال" : "خطأ" })).rejects.toBe(failure);
     expect(store.getSnapshot()[0]).toMatchObject({ type: "error", message: "تعذر الاتصال" });
   });
+
+  it("attaches requestId as description when tracked operation rejects with an error carrying requestId", async () => {
+    const store = createNotificationStore();
+    const error = { message: "Server failure", requestId: "trace-abc-123" };
+    await expect(store.trackPromise(() => Promise.reject(error), {
+      progress: "جارٍ التنفيذ",
+      success: "تم",
+      error: "فشلت العملية",
+    })).rejects.toBe(error);
+
+    expect(store.getSnapshot()[0]).toMatchObject({
+      type: "error",
+      message: "فشلت العملية",
+      description: "معرّف العملية: trace-abc-123",
+    });
+  });
 });

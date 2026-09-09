@@ -1,3 +1,4 @@
+import type { AdminIdentity } from "../../types/domain";
 import { describe, expect, it, vi } from "vitest";
 import { ApiClient, ApiError } from "../http";
 import { createAdminServices } from "./services";
@@ -136,27 +137,70 @@ describe("explicit admin operations", () => {
     expect(JSON.parse(String(fetcher.mock.calls[2][1]?.body))).toEqual({ sms_provider: "taqnyat", sms_api_key: "replacement-secret", sms_sender_name: "SOOQ", sms_username: "gateway-user", sms_user_sender: "SOOQ", is_otp_enabled: false });
   });
 
-  it("reflects fixture decisions in later reads while keeping audit records immutable and instances isolated", async () => {
-    const services = createFixtureAdminServices();
-    await services.users.ban(201, { isBanned: true, reason: "سبب الحظر" });
+  it("reflects fixture decisions in later reads and appends attributable immutable audit records upon confirmed mutations", async () => {
+    const mockAdmin: AdminIdentity = {
+      id: 42,
+      name: "سارة المشرفة",
+      email: "sara@example.test",
+      phone: "+966500000042",
+      roleId: 1,
+      role: null,
+      permissions: [],
+      isActive: true,
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: null,
+    };
+    const services = createFixtureAdminServices({ getActingAdmin: () => mockAdmin });
+
+    await services.users.ban(201, { isBanned: true, reason: "سبب الحظر التجريبي" });
     expect((await services.users.list({ filters: [{ field: "isBanned", operator: "eq", value: true }] })).pagination.totalItems).toBe(2);
+
     await services.users.ban(201, { isBanned: false });
     expect((await services.users.list({ filters: [{ field: "isBanned", operator: "eq", value: false }] })).items[0].banReason).toBe("");
-    await services.reports.resolve(801, "تمت المعالجة");
+
+    await services.reports.resolve(801, "تمت المعالجة بنجاح");
     expect((await services.reports.list({ filters: [{ field: "status", operator: "eq", value: "open" }] })).items).toEqual([]);
     await expect(services.reports.resolve(801, "مرة أخرى")).rejects.toMatchObject({ kind: "conflict" });
+
     await services.commissions.verify(511, { status: "rejected", notes: "إيصال غير مطابق" });
     expect((await services.commissions.list()).items[0].status).toBe("rejected");
     await expect(services.commissions.verify(511, { status: "verified" })).rejects.toMatchObject({ kind: "conflict" });
-    const audit = await services.audit.list();
-    expect((await services.audit.list({ filters: [{ field: "q", operator: "contains", value: "VERIFY_COMMISSION" }] })).items).toHaveLength(1);
-    expect((await services.audit.list({ filters: [{ field: "q", operator: "contains", value: "غير موجود" }] })).items).toEqual([]);
-    await expect(services.audit.list({ sorters: [{ field: "createdAt", order: "desc" }] })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
+
     await services.listings.moderate(1048, { status: "active" });
     expect((await services.statistics.get()).activeListings).toBe(1);
+
     await services.listings.delete(1048);
     expect((await services.listings.list({ filters: [{ field: "status", operator: "eq", value: "active" }] })).items).toEqual([]);
-    expect(await services.audit.list()).toEqual(audit);
+
+    const auditList = await services.audit.list();
+    expect(auditList.pagination.totalItems).toBeGreaterThanOrEqual(7);
+
+    const latestAudit = auditList.items[0];
+    expect(latestAudit).toMatchObject({
+      action: "DELETE_AD",
+      entityType: "listing",
+      entityId: 1048,
+      adminId: 42,
+      admin: { id: 42, name: "سارة المشرفة" },
+      ipAddress: "127.0.0.1",
+    });
+
+    const banAudits = (await services.audit.list({ filters: [{ field: "q", operator: "contains", value: "BAN_USER" }] })).items;
+    expect(banAudits.length).toBeGreaterThanOrEqual(1);
+    const banAudit = banAudits.find((row) => row.action === "BAN_USER");
+    expect(banAudit).toMatchObject({
+      action: "BAN_USER",
+      entityType: "user",
+      entityId: 201,
+      adminId: 42,
+    });
+
+    // Searching audit by metadata reason/notes
+    const reasonAudits = (await services.audit.list({ filters: [{ field: "q", operator: "contains", value: "سبب الحظر التجريبي" }] })).items;
+    expect(reasonAudits).toHaveLength(1);
+
+    expect((await services.audit.list({ filters: [{ field: "q", operator: "contains", value: "غير موجود إطلاقاً" }] })).items).toEqual([]);
+    await expect(services.audit.list({ sorters: [{ field: "createdAt", order: "desc" }] })).rejects.toMatchObject({ code: "UNCONFIRMED_ADMIN_CONTRACT" });
     expect((await createFixtureAdminServices().commissions.list()).items[0].status).toBe("paid");
   });
 

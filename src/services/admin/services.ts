@@ -25,7 +25,7 @@ export function createAdminServices(client: ApiClient, options: ServiceOptions =
   function catalog<T extends { id: number }, TInput>(resource: string, mapper: (value: unknown) => T, request: (value: unknown) => unknown): CatalogService<T, TInput> {
     const path = `admin/${resource}`;
     async function all(context?: RequestContext, regionId?: number) {
-      return mapListResponse(await client.get<unknown>(path, { signal: context?.signal, query: regionId === undefined ? undefined : { region_id: regionId } }), mapper);
+      return mapListResponse(await client.get<unknown>(path, { signal: context?.signal, correlationId: context?.correlationId, query: regionId === undefined ? undefined : { region_id: regionId } }), mapper);
     }
     return {
       list: (query = {}) => run(query, async () => {
@@ -38,26 +38,26 @@ export function createAdminServices(client: ApiClient, options: ServiceOptions =
         entityId(id);
         return (await all(context)).find((item) => item.id === id) ?? missingRecord();
       }),
-      create: (input, context) => run(context, async () => mapSuccessResponse(await client.post<unknown>(path, request(input), { signal: context?.signal }), mapper).data),
-      update: (id, input, context) => run(context, async () => mapSuccessResponse(await client.put<unknown>(`${path}/${entityId(id)}`, request(input), { signal: context?.signal }), mapper).data),
+      create: (input, context) => run(context, async () => mapSuccessResponse(await client.post<unknown>(path, request(input), { signal: context?.signal, correlationId: context?.correlationId }), mapper).data),
+      update: (id, input, context) => run(context, async () => mapSuccessResponse(await client.put<unknown>(`${path}/${entityId(id)}`, request(input), { signal: context?.signal, correlationId: context?.correlationId }), mapper).data),
       delete: (id, context) => run(context, async () => {
-        mapActionResponse(await client.delete<unknown>(`${path}/${entityId(id)}`, { signal: context?.signal }));
+        mapActionResponse(await client.delete<unknown>(`${path}/${entityId(id)}`, { signal: context?.signal, correlationId: context?.correlationId }));
         return { id };
       }),
     };
   }
 
   function paged<T>(resource: "users" | "commissions" | "reports", mapper: (value: unknown) => T, query: ListOptions = {}) {
-    return run(query, async () => mapPaginatedResponse(await client.get<unknown>(`admin/${resource}`, { query: serverQuery(resource, query), signal: query.signal }), mapper));
+    return run(query, async () => mapPaginatedResponse(await client.get<unknown>(`admin/${resource}`, { query: serverQuery(resource, query), signal: query.signal, correlationId: query.correlationId }), mapper));
   }
-  const action = async (path: string, method: "post" | "put" | "patch", body: unknown, context?: RequestContext) => mapActionResponse(await client[method]<unknown>(path, body, { signal: context?.signal }));
+  const action = async (path: string, method: "post" | "put" | "patch", body: unknown, context?: RequestContext) => mapActionResponse(await client[method]<unknown>(path, body, { signal: context?.signal, correlationId: context?.correlationId }));
 
   return {
     categories: catalog("categories", mapCategory, categoryRequest),
     regions: catalog("regions", mapRegion, regionRequest),
     villages: catalog("villages", mapVillage, villageRequest),
     banners: catalog("banners", mapBanner, bannerRequest),
-    statistics: { get: (context) => run(context, async () => mapSuccessResponse(await client.get<unknown>("admin/stats", { signal: context?.signal }), mapDashboardMetrics).data) },
+    statistics: { get: (context) => run(context, async () => mapSuccessResponse(await client.get<unknown>("admin/stats", { signal: context?.signal, correlationId: context?.correlationId }), mapDashboardMetrics).data) },
     users: {
       list: (query) => paged("users", mapUser, query),
       ban: (id, value, context) => run(context, async () => {
@@ -76,7 +76,7 @@ export function createAdminServices(client: ApiClient, options: ServiceOptions =
         if (!options.localReview && (input.status !== "verified" || input.notes !== undefined)) return unsupportedContract();
         const body: ApiVerifyCommissionRequest = { status: input.status, ...(input.notes === undefined ? {} : { notes: textInput(input.notes) }) };
         if (body.status === "rejected") textInput(body.notes);
-        return mapSuccessResponse(await client.patch<unknown>(`admin/commissions/${entityId(id)}/verify`, body, { signal: context?.signal }), mapCommission).data;
+        return mapSuccessResponse(await client.patch<unknown>(`admin/commissions/${entityId(id)}/verify`, body, { signal: context?.signal, correlationId: context?.correlationId }), mapCommission).data;
       }),
     },
     reports: {
@@ -87,7 +87,7 @@ export function createAdminServices(client: ApiClient, options: ServiceOptions =
       }),
     },
     listings: {
-      list: (query = {}) => run(query, async () => mapPaginatedResponse(await client.get<unknown>("admin/ads", { query: serverQuery("listings", query), signal: query.signal }), mapListing)),
+      list: (query = {}) => run(query, async () => mapPaginatedResponse(await client.get<unknown>("admin/ads", { query: serverQuery("listings", query), signal: query.signal, correlationId: query.correlationId }), mapListing)),
       moderate: (id, value, context) => run(context, async () => {
         const input = inputRecord(value, ["status", "reason"]);
         if (input.status !== "active" && input.status !== "rejected") return unsupportedContract();
@@ -98,7 +98,7 @@ export function createAdminServices(client: ApiClient, options: ServiceOptions =
         const body: ApiUpdateListingStatusRequest = { status: input.status };
         return action(`admin/ads/${entityId(id)}/status`, "patch", body, context);
       }),
-      delete: (id, context) => run(context, async () => mapActionResponse(await client.delete<unknown>(`admin/ads/${entityId(id)}`, { signal: context?.signal }))),
+      delete: (id, context) => run(context, async () => mapActionResponse(await client.delete<unknown>(`admin/ads/${entityId(id)}`, { signal: context?.signal, correlationId: context?.correlationId }))),
     },
     broadcasts: {
       send: (value, context) => run(context, async () => {
@@ -109,7 +109,7 @@ export function createAdminServices(client: ApiClient, options: ServiceOptions =
       }),
     },
     settings: {
-      list: (context) => run(context, async () => mapListResponse(await client.get<unknown>("admin/settings", { signal: context?.signal }), mapSystemSetting)),
+      list: (context) => run(context, async () => mapListResponse(await client.get<unknown>("admin/settings", { signal: context?.signal, correlationId: context?.correlationId }), mapSystemSetting)),
       update: (key, value, context) => run(context, async () => {
         // Restrict keys so dynamic paths cannot select /sms, /otp or traverse routes.
         if (!/^[a-z][a-z0-9_]*$/.test(key) || ["sms", "otp"].includes(key)) return unsupportedContract();
@@ -129,7 +129,7 @@ export function createAdminServices(client: ApiClient, options: ServiceOptions =
         return action("admin/settings", "put", body, context);
       }),
       getSms: (context) => run(context, async () => mapSuccessResponse(
-        await client.get<unknown>("admin/settings/sms", { signal: context?.signal }),
+        await client.get<unknown>("admin/settings/sms", { signal: context?.signal, correlationId: context?.correlationId }),
         mapSmsConfiguration,
       ).data),
       updateSms: (value, context) => run(context, async () => {
@@ -143,7 +143,7 @@ export function createAdminServices(client: ApiClient, options: ServiceOptions =
           ...(input.otpEnabled === undefined ? {} : { is_otp_enabled: booleanInput(input.otpEnabled) }),
         } satisfies ApiSmsConfigurationRequest;
         return mapSuccessResponse(
-          await client.put<unknown>("admin/settings/sms", body, { signal: context?.signal }),
+          await client.put<unknown>("admin/settings/sms", body, { signal: context?.signal, correlationId: context?.correlationId }),
           mapSmsConfiguration,
         ).data;
       }),

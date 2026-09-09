@@ -14,7 +14,10 @@ function assertAuthenticated() {
 }
 
 export const adminServices = environment.api.mode === "fixture"
-  ? createFixtureAdminServices({ assertAuthenticated })
+  ? createFixtureAdminServices({
+      assertAuthenticated,
+      getActingAdmin: () => adminSessionRepository.load()?.admin ?? null,
+    })
   : createAdminServices(createConfiguredApiClient({
       getAccessToken: () => adminSessionRepository.load()?.tokens.accessToken ?? null,
       onUnauthorized: () => adminSessionRepository.invalidate("unauthorized"),

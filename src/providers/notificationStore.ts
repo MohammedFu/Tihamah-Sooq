@@ -51,7 +51,16 @@ export function createNotificationStore() {
       open({ key, message: typeof messages.success === "function" ? messages.success(value) : messages.success, type: "success" });
       return value;
     } catch (error) {
-      open({ key, message: typeof messages.error === "function" ? messages.error(error) : messages.error, type: "error" });
+      const requestId = (error && typeof error === "object" && "requestId" in error && typeof (error as { requestId?: unknown }).requestId === "string")
+        ? (error as { requestId: string }).requestId
+        : null;
+      const description = requestId ? `معرّف العملية: ${requestId}` : undefined;
+      open({
+        key,
+        message: typeof messages.error === "function" ? messages.error(error) : messages.error,
+        description,
+        type: "error",
+      });
       throw error;
     }
   }
