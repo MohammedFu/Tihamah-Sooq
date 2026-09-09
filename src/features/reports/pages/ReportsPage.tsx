@@ -16,6 +16,7 @@ import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../
 import { Drawer } from "../../../components/ui/Drawer";
 import { FormDialog, SubmitButton, TextareaField, ValidatedForm } from "../../../components/ui/forms";
 import { PageHeader } from "../../../components/ui/PageHeader";
+import { SensitiveValue } from "../../../components/ui/SensitiveValue";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
 import { isApiError } from "../../../services/http";
@@ -88,8 +89,8 @@ function reportColumns(onSelect: (report: Report) => void): DataTableColumn<Repo
       cell: (report) => (
         <>
           <strong>{report.reporter?.fullName ?? `مستخدم #${report.reporterId}`}</strong>
-          <small className="block-copy" dir="ltr">
-            {report.reporter?.phone ?? "—"}
+          <small className="block-copy">
+            <SensitiveValue value={report.reporter?.phone} type="phone" resource="reports" action="show" label="رقم جوال المبلّغ" />
           </small>
         </>
       ),
@@ -115,8 +116,8 @@ function reportColumns(onSelect: (report: Report) => void): DataTableColumn<Repo
         return (
           <>
             <strong>{seller.fullName}</strong>
-            <small className="block-copy" dir="ltr">
-              {seller.phone}
+            <small className="block-copy">
+              <SensitiveValue value={seller.phone} type="phone" resource="reports" action="show" label="رقم جوال المعلن" />
             </small>
           </>
         );
@@ -414,7 +415,9 @@ export function ReportsPage() {
               </div>
               <div>
                 <dt>جوال مقدم البلاغ</dt>
-                <dd dir="ltr">{selected.reporter?.phone ?? "—"}</dd>
+                <dd>
+                  <SensitiveValue value={selected.reporter?.phone} type="phone" resource="reports" action="show" label="رقم جوال المبلّغ" />
+                </dd>
               </div>
               <div>
                 <dt>المستخدم المبلغ عنه</dt>
@@ -435,7 +438,9 @@ export function ReportsPage() {
               </div>
               <div>
                 <dt>جوال المبلغ عنه</dt>
-                <dd dir="ltr">{accusedSeller?.phone ?? "—"}</dd>
+                <dd>
+                  <SensitiveValue value={accusedSeller?.phone} type="phone" resource="reports" action="show" label="رقم جوال المعلن" />
+                </dd>
               </div>
               <div>
                 <dt>الإعلان المرتبط</dt>

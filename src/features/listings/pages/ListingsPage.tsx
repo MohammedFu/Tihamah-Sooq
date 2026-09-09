@@ -7,6 +7,7 @@ import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../
 import { Drawer } from "../../../components/ui/Drawer";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { PageHeader } from "../../../components/ui/PageHeader";
+import { SensitiveValue } from "../../../components/ui/SensitiveValue";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { FormDialog, SelectField, SubmitButton, TextareaField, ValidatedForm } from "../../../components/ui/forms";
 import { useAdminNotification } from "../../../providers/notificationStore";
@@ -43,7 +44,7 @@ function ListingThumbnail({ listing }: { listing: Listing }) {
 function listingColumns(onSelect: (listing: Listing) => void): DataTableColumn<Listing>[] {
   return [
     { id: "listing", header: "الإعلان", cell: (listing) => <div className="record-primary"><ListingThumbnail key={primaryImage(listing)?.url} listing={listing} /><span><strong>{listing.title}</strong><small><bdi dir="ltr">#{listing.id}</bdi> · {formatDate(listing.createdAt)}</small></span></div> },
-    { id: "seller", header: "المعلن", cell: (listing) => <><strong>{listing.seller?.fullName ?? "معلن غير متاح"}</strong><small className="block-copy" dir="ltr">{listing.seller?.phone ?? "—"}</small></> },
+    { id: "seller", header: "المعلن", cell: (listing) => <><strong>{listing.seller?.fullName ?? "معلن غير متاح"}</strong><small className="block-copy"><SensitiveValue value={listing.seller?.phone} type="phone" resource="listings" action="show" label="رقم جوال المعلن" /></small></> },
     { id: "location", header: "القسم والموقع", cell: (listing) => <>{listing.category?.name ?? "قسم غير متاح"}<small className="block-copy">{listing.village?.name ?? "قرية غير متاحة"}، {listing.region?.name ?? "منطقة غير متاحة"}</small></> },
     { id: "price", header: "السعر", sortable: true, className: "numeric", cell: (listing) => moneyFormatter.format(listing.price) },
     { id: "views", header: "المشاهدات", className: "numeric", cell: (listing) => listing.viewCount === null ? "غير متاح" : listing.viewCount.toLocaleString("ar-SA") },
@@ -160,7 +161,7 @@ export function ListingsPage() {
         {selected && <div className="detail-stack">
           <ListingMediaGallery listing={selected} />
           <div><div className="detail-title-row"><h3>{selected.title}</h3><StatusBadge value={selected.status} /></div><p className="muted">{selected.description}</p></div>
-          <dl className="detail-grid"><div><dt>السعر</dt><dd>{moneyFormatter.format(selected.price)}</dd></div><div><dt>القسم</dt><dd>{selected.category?.name ?? "غير متاح"}</dd></div><div><dt>المعلن</dt><dd>{selected.seller?.fullName ?? "غير متاح"}</dd></div><div><dt>الجوال</dt><dd dir="ltr">{selected.seller?.phone ?? "—"}</dd></div><div><dt>الموقع</dt><dd>{selected.village?.name ?? "قرية غير متاحة"}، {selected.region?.name ?? "منطقة غير متاحة"}</dd></div><div><dt>المشاهدات</dt><dd>{selected.viewCount === null ? "غير متاح" : selected.viewCount.toLocaleString("ar-SA")}</dd></div><div><dt>تاريخ النشر</dt><dd>{formatDate(selected.createdAt)}</dd></div><div><dt>آخر تحديث</dt><dd>{selected.updatedAt ? formatDate(selected.updatedAt) : "غير متاح"}</dd></div></dl>
+          <dl className="detail-grid"><div><dt>السعر</dt><dd>{moneyFormatter.format(selected.price)}</dd></div><div><dt>القسم</dt><dd>{selected.category?.name ?? "غير متاح"}</dd></div><div><dt>المعلن</dt><dd>{selected.seller?.fullName ?? "غير متاح"}</dd></div><div><dt>الجوال</dt><dd><SensitiveValue value={selected.seller?.phone} type="phone" resource="listings" action="show" label="رقم جوال المعلن" /></dd></div><div><dt>الموقع</dt><dd>{selected.village?.name ?? "قرية غير متاحة"}، {selected.region?.name ?? "منطقة غير متاحة"}</dd></div><div><dt>المشاهدات</dt><dd>{selected.viewCount === null ? "غير متاح" : selected.viewCount.toLocaleString("ar-SA")}</dd></div><div><dt>تاريخ النشر</dt><dd>{formatDate(selected.createdAt)}</dd></div><div><dt>آخر تحديث</dt><dd>{selected.updatedAt ? formatDate(selected.updatedAt) : "غير متاح"}</dd></div></dl>
           {Boolean(actionError) && <div className="alert-box danger" role="alert"><Info aria-hidden="true" size={18} /><p><strong>لم يُحفظ القرار</strong>{errorMessage(actionError)}</p></div>}
           <div className="decision-actions">
             {selected.status === "pending_review" && <><AuthorizedButton resource="listings" action="approve" className="button success-button" type="button" disabled={pending} aria-busy={pending} onClick={() => { void moderate(selected, "active"); }}><Check aria-hidden="true" size={17} />اعتماد الإعلان</AuthorizedButton><AuthorizedButton resource="listings" action="reject" className="button danger-outline" type="button" disabled={pending} onClick={() => openRejection(selected)}><X aria-hidden="true" size={17} />رفض الإعلان</AuthorizedButton></>}

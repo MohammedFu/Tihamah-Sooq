@@ -9,6 +9,7 @@ import { Drawer } from "../../../components/ui/Drawer";
 import { FormDialog, SubmitButton, TextareaField, ValidatedForm } from "../../../components/ui/forms";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { PageHeader } from "../../../components/ui/PageHeader";
+import { SensitiveValue } from "../../../components/ui/SensitiveValue";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
 import { ApiError } from "../../../services/http";
@@ -51,7 +52,9 @@ function userColumns(
           <span>{user.fullName.slice(0, 1)}</span>
           <div>
             <strong>{user.fullName}</strong>
-            <small dir="ltr">{user.phone}</small>
+            <small className="block-copy">
+              <SensitiveValue value={user.phone} type="phone" resource="users" action="show" label="رقم الجوال" />
+            </small>
           </div>
         </div>
       ),
@@ -299,7 +302,9 @@ export function UsersPage() {
               <span>{selected.fullName.slice(0, 1)}</span>
               <div>
                 <h3>{selected.fullName}</h3>
-                <p dir="ltr">{selected.phone}</p>
+                <p>
+                  <SensitiveValue value={selected.phone} type="phone" resource="users" action="show" label="رقم الجوال" />
+                </p>
               </div>
               <StatusBadge value={selected.isBanned ? "banned" : "active"} />
             </div>
