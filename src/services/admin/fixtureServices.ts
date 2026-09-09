@@ -1,3 +1,4 @@
+import type { AdminIdentity } from "../../types/domain";
 import { ApiClient } from "../http";
 import type { LocalReviewServices } from "./contracts";
 import { createAdminFixtureData, fixtureDate } from "./fixtureData";
@@ -5,10 +6,46 @@ import { paginate } from "./listQuery";
 import { createAdminServices, type ServiceOptions } from "./services";
 import { unsupportedContract } from "./validation";
 
+export type FixtureServiceOptions = Pick<ServiceOptions, "assertAuthenticated"> & {
+  getActingAdmin?: () => AdminIdentity | null;
+};
+
+const defaultFixtureAdmin: AdminIdentity = {
+  id: 1,
+  name: "عبدالله المشرف",
+  email: "admin@example.test",
+  phone: "+966500000000",
+  roleId: 1,
+  role: { id: 1, name: "مدير النظام", description: "صلاحيات كاملة", permissions: [], createdAt: fixtureDate, updatedAt: null },
+  permissions: [],
+  isActive: true,
+  createdAt: fixtureDate,
+  updatedAt: null,
+};
+
 // An isolated in-memory transport exercises the same requests, response mappers and
 // list semantics as remote mode. It never calls the network or persists user data.
-export function createFixtureAdminServices(options: Pick<ServiceOptions, "assertAuthenticated"> = {}) {
+export function createFixtureAdminServices(options: FixtureServiceOptions = {}) {
   const state = createAdminFixtureData();
+  let nextAuditId = state.audit.reduce((max, row) => Math.max(max, typeof row.id === "number" ? row.id : 0), 9900);
+
+  const appendAudit = (action: string, entityType: string, entityId: number | null, metadata: Record<string, unknown> | null = null) => {
+    const acting = options.getActingAdmin?.();
+    const admin: AdminIdentity = acting ?? defaultFixtureAdmin;
+    const adminId = typeof admin.id === "number" ? admin.id : Number(admin.id);
+    state.audit.unshift({
+      id: ++nextAuditId,
+      adminId,
+      admin,
+      action,
+      entityType,
+      entityId,
+      metadata,
+      ipAddress: "127.0.0.1",
+      createdAt: fixtureDate,
+    });
+  };
+
   const ok = (data: unknown, status = 200) => Response.json({ success: true, data }, { status });
   const done = () => Response.json({ success: true, message: "تم حفظ التغيير التجريبي." });
   const error = (status: number) => Response.json({ success: false }, { status });
@@ -46,10 +83,12 @@ export function createFixtureAdminServices(options: Pick<ServiceOptions, "assert
           || (current === "rejected" && next === "active");
         if (!permitted) return error(409);
         state.listings[index] = { ...state.listings[index], status: next, updated_at: fixtureDate };
+        appendAudit(next === "active" ? "APPROVE_AD" : "REJECT_AD", "listing", id, body.reason ? { reason: String(body.reason) } : null);
         return done();
       }
       if (method === "DELETE" && !action) {
         state.listings.splice(index, 1);
+        appendAudit("DELETE_AD", "listing", id, { soft_delete: true });
         return done();
       }
     }
@@ -100,6 +139,7 @@ export function createFixtureAdminServices(options: Pick<ServiceOptions, "assert
       const index = state.users.findIndex((row) => row.id === id);
       if (index < 0) return error(404);
       state.users[index] = { ...state.users[index], is_banned: Boolean(body.is_banned), ban_reason: String(body.ban_reason), updated_at: fixtureDate };
+      appendAudit(body.is_banned ? "BAN_USER" : "UNBAN_USER", "user", id, body.ban_reason ? { reason: String(body.ban_reason) } : null);
       return done();
     }
     if (resource === "commissions" && method === "PATCH" && action === "verify") {
@@ -107,6 +147,7 @@ export function createFixtureAdminServices(options: Pick<ServiceOptions, "assert
       if (index < 0) return error(404);
       if (state.commissions[index].status !== "paid") return error(409);
       state.commissions[index] = { ...state.commissions[index], status: String(body.status), updated_at: fixtureDate };
+      appendAudit(body.status === "verified" ? "VERIFY_COMMISSION" : "REJECT_COMMISSION", "commission", id, body.notes ? { notes: String(body.notes) } : null);
       return ok(state.commissions[index]);
     }
     if (resource === "reports" && method === "PATCH" && action === "resolve") {
@@ -114,9 +155,13 @@ export function createFixtureAdminServices(options: Pick<ServiceOptions, "assert
       if (index < 0) return error(404);
       if (state.reports[index].status === "resolved") return error(409);
       state.reports[index] = { ...state.reports[index], status: "resolved", resolution_notes: String(body.resolution_notes), updated_at: fixtureDate };
+      appendAudit("RESOLVE_REPORT", "report", id, { notes: String(body.resolution_notes) });
       return done();
     }
-    if (resource === "notifications" && idText === "broadcast" && method === "POST") return done();
+    if (resource === "notifications" && idText === "broadcast" && method === "POST") {
+      appendAudit("BROADCAST_NOTIFICATION", "notification", null, { title: String(body.title ?? "") });
+      return done();
+    }
     if (resource === "settings") {
       if (method === "GET" && !idText) return ok(state.settings);
       const update = (key: string, value: string, description?: string) => {
@@ -133,14 +178,24 @@ export function createFixtureAdminServices(options: Pick<ServiceOptions, "assert
       if (idText === "sms" && method === "GET") return ok(smsConfiguration());
       if (idText === "sms" && method === "PUT") {
         for (const [key, value] of Object.entries(body)) update(key, String(value));
+        appendAudit("UPDATE_SMS_CONFIG", "setting", null, { provider: String(body.sms_provider ?? "") });
         return ok(smsConfiguration());
       }
       if (method === "PUT" && !idText) {
         for (const [key, value] of Object.entries(body.settings as Record<string, string>)) update(key, value);
+        appendAudit("BATCH_UPDATE_SETTINGS", "setting", null, { keys: Object.keys(body.settings as Record<string, string>) });
         return done();
       }
-      if (method === "PATCH" && idText === "otp") { update("is_otp_enabled", String(body.is_otp_enabled)); return done(); }
-      if (method === "PUT" && idText) { update(idText, String(body.value), body.description === undefined ? undefined : String(body.description)); return done(); }
+      if (method === "PATCH" && idText === "otp") {
+        update("is_otp_enabled", String(body.is_otp_enabled));
+        appendAudit("SET_OTP_ENABLED", "setting", null, { is_otp_enabled: Boolean(body.is_otp_enabled) });
+        return done();
+      }
+      if (method === "PUT" && idText) {
+        update(idText, String(body.value), body.description === undefined ? undefined : String(body.description));
+        appendAudit("UPDATE_SETTING", "setting", null, { key: idText, value: String(body.value) });
+        return done();
+      }
     }
     if (resource === "stats" && method === "GET") return ok({
       total_users: state.users.length, active_ads: state.listings.filter((row) => row.status === "active").length,
@@ -155,7 +210,7 @@ export function createFixtureAdminServices(options: Pick<ServiceOptions, "assert
       if (query.sorters?.length || (query.filters ?? []).some((filter) => filter.field !== "q" || !["eq", "contains"].includes(filter.operator) || typeof filter.value !== "string")) return unsupportedContract();
       const search = String(query.filters?.find((filter) => filter.field === "q")?.value ?? "").trim().toLocaleLowerCase("ar");
       const rows = search
-        ? state.audit.filter((row) => `${row.id} ${row.admin?.name ?? ""} ${row.action} ${row.entityType} ${row.entityId ?? ""} ${row.ipAddress}`.toLocaleLowerCase("ar").includes(search))
+        ? state.audit.filter((row) => `${row.id} ${row.admin?.name ?? ""} ${row.action} ${row.entityType} ${row.entityId ?? ""} ${row.ipAddress} ${JSON.stringify(row.metadata ?? "")}`.toLocaleLowerCase("ar").includes(search))
         : state.audit;
       return paginate(rows.map((row) => ({ ...row })), query);
     } },

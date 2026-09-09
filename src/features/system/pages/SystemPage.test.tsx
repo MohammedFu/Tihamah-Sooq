@@ -10,7 +10,7 @@ import type { ActionResult, AdminServices } from "../../../services/admin/contra
 import { createFixtureAdminServices } from "../../../services/admin/fixtureServices";
 import { createAdminServices } from "../../../services/admin/services";
 import { ApiClient } from "../../../services/http";
-import type { Permission } from "../../../types/domain";
+import type { AdminIdentity, Permission } from "../../../types/domain";
 import { SystemPage } from "./SystemPage";
 
 const fullPermissions: Permission[] = [
@@ -122,14 +122,40 @@ describe("SystemPage", () => {
     expect(await screen.findByText("تم تفعيل إرسال رموز OTP عبر بوابة الرسائل.")).toBeInTheDocument();
   });
 
-  it("shows a paginated read-only audit adapter and filters fixture records", async () => {
+  it("shows a paginated read-only audit adapter and filters fixture records with mutation details", async () => {
     const user = userEvent.setup();
-    renderPage(createFixtureAdminServices());
+    const mockAdmin: AdminIdentity = {
+      id: 99,
+      name: "ماجد المشرف",
+      email: "majed@example.test",
+      phone: "+966500000099",
+      roleId: 1,
+      role: null,
+      permissions: [],
+      isActive: true,
+      createdAt: "2026-01-01T00:00:00Z",
+      updatedAt: null,
+    };
+    const services = createFixtureAdminServices({
+      getActingAdmin: () => mockAdmin,
+    });
+
+    // Execute a mutation before viewing audit
+    await services.users.ban(201, { isBanned: true, reason: "مخالفة الشروط والأحكام" });
+
+    renderPage(services);
 
     await user.click(await screen.findByRole("tab", { name: "سجل التدقيق" }));
-    expect(await screen.findByText("VERIFY_COMMISSION")).toBeInTheDocument();
+    expect(await screen.findByText("BAN_USER")).toBeInTheDocument();
+    expect(screen.getByText("ماجد المشرف")).toBeInTheDocument();
+    expect(screen.getByText("السبب: مخالفة الشروط والأحكام")).toBeInTheDocument();
+    expect(screen.getByText("VERIFY_COMMISSION")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /تعديل|حذف/ })).not.toBeInTheDocument();
 
+    await user.type(screen.getByLabelText("البحث في سجل التدقيق"), "مخالفة الشروط");
+    expect(await screen.findByText("BAN_USER")).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("البحث في سجل التدقيق"));
     await user.type(screen.getByLabelText("البحث في سجل التدقيق"), "غير موجود");
     expect(await screen.findByText("لا توجد عمليات تدقيق مطابقة.")).toBeInTheDocument();
   });

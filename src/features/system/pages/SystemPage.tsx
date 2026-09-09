@@ -33,7 +33,7 @@ function formatDate(value: string | null | undefined) {
 }
 
 function errorMessage(error: unknown) {
-  if (error instanceof ApiError) return error.userMessage;
+  if (error instanceof ApiError) return error.requestId ? `${error.userMessage} (معرّف الطلب: ${error.requestId})` : error.userMessage;
   if (error instanceof Error) return error.message;
   return "تعذر إكمال العملية. يرجى المحاولة مرة أخرى.";
 }
@@ -44,11 +44,34 @@ function parseBooleanSetting(value: string | undefined): boolean | null {
   return null;
 }
 
+function formatMetadata(metadata: Readonly<Record<string, unknown>> | null | undefined): string | null {
+  if (!metadata) return null;
+  const parts: string[] = [];
+  if (typeof metadata.reason === "string" && metadata.reason) parts.push(`السبب: ${metadata.reason}`);
+  if (typeof metadata.notes === "string" && metadata.notes) parts.push(`الملاحظات: ${metadata.notes}`);
+  if (typeof metadata.title === "string" && metadata.title) parts.push(`العنوان: ${metadata.title}`);
+  if (typeof metadata.key === "string" && metadata.key) parts.push(`المفتاح: ${metadata.key}`);
+  if (typeof metadata.provider === "string" && metadata.provider) parts.push(`المزود: ${metadata.provider}`);
+  if (Array.isArray(metadata.keys) && metadata.keys.length > 0) parts.push(`المفاتيح: ${metadata.keys.join(", ")}`);
+  if (typeof metadata.soft_delete === "boolean" && metadata.soft_delete) parts.push("حذف ناعم");
+  if (typeof metadata.is_otp_enabled === "boolean") parts.push(`OTP: ${metadata.is_otp_enabled ? "مفعّل" : "معطّل"}`);
+  if (parts.length > 0) return parts.join(" | ");
+  return null;
+}
+
 const auditColumns: DataTableColumn<AdminAuditRecord>[] = [
   { id: "id", header: "الرقم", className: "numeric", cell: (log) => <bdi dir="ltr">#{log.id}</bdi> },
   { id: "admin", header: "المشرف", cell: (log) => log.admin?.name || <bdi dir="ltr">#{log.adminId}</bdi> },
   { id: "action", header: "الإجراء", cell: (log) => <code className="action-code" dir="ltr">{log.action}</code> },
   { id: "entity", header: "الكيان", cell: (log) => <code dir="ltr">{log.entityType}{log.entityId === null ? "" : ` #${log.entityId}`}</code> },
+  {
+    id: "details",
+    header: "التفاصيل والملاحظات",
+    cell: (log) => {
+      const formatted = formatMetadata(log.metadata);
+      return formatted ? <span className="audit-details-text">{formatted}</span> : <span className="text-muted">—</span>;
+    },
+  },
   { id: "ip", header: "عنوان IP", cell: (log) => <bdi dir="ltr">{log.ipAddress}</bdi> },
   { id: "at", header: "الوقت", cell: (log) => formatDate(log.createdAt) },
 ];

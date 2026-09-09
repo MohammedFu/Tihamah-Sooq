@@ -24,6 +24,7 @@ export type ApiRequestOptions<TBody = unknown> = Readonly<{
   timeoutMs?: number;
   authenticated?: boolean;
   expectEnvelope?: boolean;
+  correlationId?: string;
 }>;
 
 export type ConfiguredApiClientOptions = Omit<ApiClientOptions, "baseUrl" | "timeoutMs">;
@@ -144,6 +145,11 @@ export class ApiClient {
     const method = options.method ?? "GET";
     const authenticated = options.authenticated ?? true;
     const expectEnvelope = options.expectEnvelope ?? true;
+    const correlationId = options.correlationId ?? (
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `req-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    );
     const requestUrl = buildUrl(this.baseUrl, path, options.query);
     const controller = new AbortController();
     const timeoutMs = validTimeout(options.timeoutMs ?? this.timeoutMs);
@@ -164,6 +170,8 @@ export class ApiClient {
       const headers = new Headers(this.defaultHeaders);
       new Headers(options.headers).forEach((value, key) => headers.set(key, value));
       headers.set("Accept", "application/json");
+      headers.set("X-Correlation-Id", correlationId);
+      headers.set("X-Request-Id", correlationId);
 
       if (authenticated && this.getAccessToken) {
         const accessToken = await this.getAccessToken();
@@ -184,7 +192,7 @@ export class ApiClient {
       });
 
       if (response.status === 204 || response.status === 205) {
-        if (!response.ok) await this.throwHttpError(response, null, authenticated);
+        if (!response.ok) await this.throwHttpError(response, null, authenticated, correlationId);
         return undefined as TResponse;
       }
 
@@ -195,20 +203,20 @@ export class ApiClient {
         try {
           payload = JSON.parse(text);
         } catch (cause) {
-          if (!response.ok) await this.throwHttpError(response, null, authenticated);
+          if (!response.ok) await this.throwHttpError(response, null, authenticated, correlationId);
           throw new ApiError({
             kind: "invalid_response",
             code: "INVALID_JSON_RESPONSE",
             userMessage: "استجاب الخادم ببيانات غير صالحة.",
             status: response.status,
             retryable: false,
-            requestId: response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id"),
+            requestId: response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id") ?? correlationId,
             cause,
           });
         }
       }
 
-      if (!response.ok) await this.throwHttpError(response, payload, authenticated);
+      if (!response.ok) await this.throwHttpError(response, payload, authenticated, correlationId);
 
       if (expectEnvelope) {
         if (!isEnvelope(payload)) {
@@ -219,10 +227,10 @@ export class ApiClient {
             status: response.status,
             details: null,
             retryable: false,
-            requestId: response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id"),
+            requestId: response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id") ?? correlationId,
           });
         }
-        if (!payload.success) throw createEnvelopeError(payload, response);
+        if (!payload.success) throw createEnvelopeError(payload, response, correlationId);
       }
 
       return payload as TResponse;
@@ -234,6 +242,7 @@ export class ApiClient {
           code: "REQUEST_TIMEOUT",
           userMessage: "استغرق الخادم وقتاً أطول من المتوقع. حاول مرة أخرى.",
           retryable: true,
+          requestId: correlationId,
           cause: error,
         });
       }
@@ -243,6 +252,7 @@ export class ApiClient {
           code: "REQUEST_ABORTED",
           userMessage: "تم إلغاء الطلب.",
           retryable: false,
+          requestId: correlationId,
           cause: error,
         });
       }
@@ -251,6 +261,7 @@ export class ApiClient {
         code: "NETWORK_ERROR",
         userMessage: "تعذر الاتصال بالخادم. تحقق من الشبكة وحاول مرة أخرى.",
         retryable: true,
+        requestId: correlationId,
         cause: error,
       });
     } finally {
@@ -259,8 +270,8 @@ export class ApiClient {
     }
   }
 
-  private async throwHttpError(response: Response, payload: unknown, authenticated: boolean): Promise<never> {
-    const error = createHttpError(response, payload);
+  private async throwHttpError(response: Response, payload: unknown, authenticated: boolean, fallbackRequestId?: string): Promise<never> {
+    const error = createHttpError(response, payload, fallbackRequestId);
     if (authenticated && error.kind === "unauthorized" && this.onUnauthorized) {
       try {
         await this.onUnauthorized(error);

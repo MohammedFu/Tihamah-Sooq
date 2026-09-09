@@ -1,6 +1,6 @@
 import type { AdminAuditRecord, Banner, Category, Commission, DashboardMetrics, Listing, PaginatedResult, Region, Report, SmsConfiguration, SystemSetting, User, Village } from "../../types/domain";
 
-export type RequestContext = Readonly<{ signal?: AbortSignal }>;
+export type RequestContext = Readonly<{ signal?: AbortSignal; correlationId?: string }>;
 export type ListFilter = Readonly<{ field: string; operator: "eq" | "contains"; value: string | number | boolean }>;
 export type ListSort = Readonly<{ field: string; order: "asc" | "desc" }>;
 export type ListOptions = RequestContext & Readonly<{

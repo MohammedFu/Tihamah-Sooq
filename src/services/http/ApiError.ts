@@ -112,7 +112,7 @@ function parseRetryAfter(value: string | null) {
   return Math.max(0, Math.ceil((date - Date.now()) / 1000));
 }
 
-export function createHttpError(response: Response, payload: unknown) {
+export function createHttpError(response: Response, payload: unknown, fallbackRequestId?: string | null) {
   const descriptor = httpDescriptor(response.status);
   const body = errorBody(payload);
   return new ApiError({
@@ -122,12 +122,12 @@ export function createHttpError(response: Response, payload: unknown) {
     status: response.status,
     details: body.details,
     retryable: descriptor.retryable,
-    requestId: response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id"),
+    requestId: response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id") ?? fallbackRequestId ?? null,
     retryAfterSeconds: parseRetryAfter(response.headers.get("retry-after")),
   });
 }
 
-export function createEnvelopeError(payload: unknown, response: Response) {
+export function createEnvelopeError(payload: unknown, response: Response, fallbackRequestId?: string | null) {
   const body = errorBody(payload);
   return new ApiError({
     kind: "api",
@@ -136,7 +136,7 @@ export function createEnvelopeError(payload: unknown, response: Response) {
     status: response.status,
     details: body.details,
     retryable: false,
-    requestId: response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id"),
+    requestId: response.headers.get("x-request-id") ?? response.headers.get("x-correlation-id") ?? fallbackRequestId ?? null,
   });
 }
 
