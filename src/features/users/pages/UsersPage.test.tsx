@@ -193,4 +193,25 @@ describe("UsersPage", () => {
       expect(screen.queryByText("أحمد علي")).not.toBeInTheDocument();
     });
   });
+
+  it("masks customer phone numbers by default and allows authorized reveal", async () => {
+    const user = userEvent.setup();
+    const services = createFixtureAdminServices();
+    renderPage(services);
+
+    await screen.findByText("فواز أبو عبدل");
+
+    // Masked phone is rendered by default
+    expect(screen.getByText("+966 50 ••• 0001")).toBeInTheDocument();
+    expect(screen.queryByText("+966500000001")).not.toBeInTheDocument();
+
+    // Reveal toggle exists
+    const revealBtns = await screen.findAllByRole("button", { name: "إظهار رقم الجوال" });
+    expect(revealBtns.length).toBeGreaterThan(0);
+    await user.click(revealBtns[0]);
+
+    // Unmasked phone appears
+    expect(screen.getByText("+966500000001")).toBeInTheDocument();
+  });
 });
+

@@ -19,6 +19,7 @@ import { FormDialog, SelectField, SubmitButton, TextareaField, ValidatedForm } f
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { Modal } from "../../../components/ui/Modal";
 import { PageHeader } from "../../../components/ui/PageHeader";
+import { SensitiveValue } from "../../../components/ui/SensitiveValue";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
 import { isApiError } from "../../../services/http";
@@ -72,8 +73,8 @@ function commissionColumns(onSelect: (record: Commission) => void): DataTableCol
       cell: (item) => (
         <>
           <strong>{item.seller?.fullName ?? "بائع غير متاح"}</strong>
-          <small className="block-copy" dir="ltr">
-            {item.seller?.phone ?? "—"}
+          <small className="block-copy">
+            <SensitiveValue value={item.seller?.phone} type="phone" resource="commissions" action="show" label="رقم جوال البائع" />
           </small>
         </>
       ),
@@ -398,7 +399,9 @@ export function CommissionsPage() {
               </div>
               <div>
                 <dt>رقم الجوال</dt>
-                <dd dir="ltr">{selected.seller?.phone ?? "—"}</dd>
+                <dd>
+                  <SensitiveValue value={selected.seller?.phone} type="phone" resource="commissions" action="show" label="رقم جوال البائع" />
+                </dd>
               </div>
               <div>
                 <dt>الإعلان المباع</dt>

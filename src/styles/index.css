@@ -260,3 +260,13 @@ h2, h3 { color: var(--color-rural-dark); font-weight: 700; }
 /* Keep native file controls keyboard-accessible while preserving the custom upload surface. */
 .upload-field input { display: block; position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
 .upload-field:focus-within { outline: 3px solid var(--color-focus-ring); outline-offset: 2px; border-color: var(--color-focus); }
+
+/* Sensitive operational data masking and reveal controls */
+.sensitive-value-wrapper { display: inline-flex; align-items: center; gap: var(--space-2, 6px); vertical-align: middle; }
+.sensitive-text { font-family: inherit; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.sensitive-reveal-toggle { display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-xs, 4px); background: transparent; color: var(--color-text-muted); cursor: pointer; transition: color var(--transition-fast), background-color var(--transition-fast); }
+.sensitive-reveal-toggle:hover { color: var(--color-primary); background: var(--color-primary-soft); }
+.sensitive-reveal-toggle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.sensitive-locked { display: inline-grid; place-items: center; width: 20px; height: 20px; color: var(--color-text-muted); }
+.sensitive-empty { color: var(--color-text-subtle); }
+

@@ -86,7 +86,8 @@ As of 2026-09-09:
 - Shared form infrastructure now uses React Hook Form and Zod, accessible field/error primitives, mutation submission locking, focus-contained/restoring dialogs, dirty-close confirmation, and Refine route/unload warnings. The locations editor is the first integrated reference; remaining page forms migrate with T18-T25. Details are documented in `docs/FORMS.md`.
 - Feature feedback and Refine mutations now share one typed, accessible notification queue with success, error, warning, information, and persistent progress states. Page-local toast timers have been removed, and promise tracking prevents high-risk actions from reporting success before resolution. Details are documented in `docs/NOTIFICATIONS.md`.
 - T27 attaches end-to-end correlation tracking (`X-Correlation-Id`, `X-Request-Id`) to every request with cryptographic fallback and error diagnostics retention. Notifications and error displays surface `requestId` for operator troubleshooting. Mutations commit immutable audit trails with acting administrator attribution only after server confirmation, and the system audit table provides real-time search across action names, entities, admins, and mutation metadata. Remote audit fails closed (`UNCONFIRMED_ADMIN_CONTRACT`) per Contract Gap 5. Details are documented in `docs/AUDIT_METADATA.md`.
-- Verification now includes 267 passing unit/component/provider tests across 47 test files and 26 passing Playwright workflows, including listing moderation transitions, dashboard metric screenshots and filter-link checks, axe-core WCAG A/AA scans of login and all nine routes at 390/1440 px, interactive overlay scans, keyboard focus flows, 320 CSS-pixel reflow, all-route design-system/overflow checks, responsive data tables, identity/provider checks, limited-role enforcement, session expiry, safe reauthentication, and requested-route restoration. Production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
+- T29 enforces masking by default for sensitive operational data (phone numbers, emails, IBANs, bank references, secrets) with bidirectional `<bdi dir="ltr">` isolation. The permission-aware `SensitiveValue` component gates reveal controls behind Refine RBAC, while settings remain write-only and error/log sanitization prevents credential leaks. Details are documented in `docs/SENSITIVE_DATA.md`.
+- Verification now includes 295 passing unit/component/provider tests across 49 test files and 26 passing Playwright workflows, including listing moderation transitions, dashboard metric screenshots and filter-link checks, axe-core WCAG A/AA scans of login and all nine routes at 390/1440 px, interactive overlay scans, keyboard focus flows, 320 CSS-pixel reflow, all-route design-system/overflow checks, responsive data tables, identity/provider checks, limited-role enforcement, session expiry, safe reauthentication, and requested-route restoration. Production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
 
 ## 6. Target Source Structure
 
@@ -503,7 +504,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T29 - Mask sensitive operational data
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T09-T10
 - **Objective:** Limit exposure of phone numbers, bank references, IBANs, email addresses, and credentials.
@@ -511,6 +512,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `src/components/ui/SensitiveValue.tsx`, formatting utilities, affected pages.
 - **Acceptance:** Default views show the minimum needed data; reveal actions are permission-gated and auditable where required; secrets never appear in error messages.
 - **Verification:** Permission and snapshot tests.
+- **Completion note (2026-09-09):** Implemented deterministic masking utilities (`src/utils/masking.ts`) for Saudi/regional mobile numbers, emails, IBANs, bank references, credentials, and log/query sanitization. Built the permission-aware `SensitiveValue` component (`src/components/ui/SensitiveValue.tsx`) with default masked rendering, `<bdi dir="ltr">` bidirectional isolation, accessible `Eye`/`EyeOff` reveal toggles, permission gating via Refine RBAC (`canAccessWithPermissions`), locked-state enforcement for unprivileged roles, and an optional `onReveal` callback for auditable unmasking. Integrated `SensitiveValue` across `/users` (table & drawer phone), `/listings` (table & drawer seller phone), `/commissions` (table & drawer seller phone), and `/reports` (table & drawer reporter and accused seller phones). Documented in `docs/SENSITIVE_DATA.md`. All unit and component tests passed cleanly (49 test files, 295 Vitest tests, 0 lint errors, clean production build).
 
 ### T30 - Handle concurrency and stale records
 
