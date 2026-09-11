@@ -96,4 +96,38 @@ describe("listing moderation page", () => {
     expect(await screen.findByText("تم إخفاء الإعلان بعد تأكيد الخادم.")).toBeInTheDocument();
     expect((await services.listings.list({ filters: [{ field: "status", operator: "eq", value: "active" }] })).items).toEqual([]);
   });
+
+  it("keeps stale decisions local, refreshes the scoped list, and preserves filters", async () => {
+    const user = userEvent.setup();
+    const fixture = createFixtureAdminServices();
+    const moderate = vi.fn<AdminServices["listings"]["moderate"]>().mockRejectedValueOnce(
+      new ApiError({
+        kind: "conflict",
+        code: "PRECONDITION_FAILED",
+        status: 412,
+        userMessage: "تغير الإعلان منذ فتحه.",
+        requestId: "listing-conflict-1048",
+      }),
+    );
+    renderPage({ ...fixture, listings: { ...fixture.listings, moderate } });
+
+    await screen.findByText("مجموعة أغنام للبيع");
+    const search = screen.getByLabelText("البحث في الإعلانات");
+    await user.type(search, "أغنام");
+    await user.click(screen.getByRole("button", { name: "عرض تفاصيل الإعلان 1048" }));
+    const drawer = screen.getByRole("dialog", { name: "الإعلان #1048" });
+    await user.click(within(drawer).getByRole("button", { name: "اعتماد الإعلان" }));
+
+    expect(await within(drawer).findByText("تغيّر السجل قبل حفظ القرار")).toBeInTheDocument();
+    expect(within(drawer).getByText("قيد المراجعة")).toBeInTheDocument();
+    expect(within(drawer).getByText(/listing-conflict-1048/)).toBeInTheDocument();
+    expect(moderate).toHaveBeenCalledTimes(1);
+
+    const refresh = await within(drawer).findByRole("button", { name: "تحديث ومراجعة السجل" });
+    await user.click(refresh);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "الإعلان #1048" })).not.toBeInTheDocument());
+    expect(search).toHaveValue("أغنام");
+    expect(screen.getByText("مجموعة أغنام للبيع")).toBeInTheDocument();
+    expect(moderate).toHaveBeenCalledTimes(1);
+  });
 });

@@ -18,11 +18,12 @@ import { Drawer } from "../../../components/ui/Drawer";
 import { FormDialog, SelectField, SubmitButton, TextareaField, ValidatedForm } from "../../../components/ui/forms";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { Modal } from "../../../components/ui/Modal";
+import { MutationConflictAlert } from "../../../components/ui/MutationConflictAlert";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { SensitiveValue } from "../../../components/ui/SensitiveValue";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
-import { isApiError } from "../../../services/http";
+import { isApiError, isMutationConflict } from "../../../services/http";
 import type { Commission, CommissionStatus } from "../../../types/domain";
 import { useDashboardMetrics } from "../../dashboard/api/useDashboardMetrics";
 import { useCommissions } from "../api/useCommissions";
@@ -226,6 +227,7 @@ export function CommissionsPage() {
       setApproving(null);
     } catch (error) {
       setActionError(error);
+      if (isMutationConflict(error)) setApproving(null);
     }
   }
 
@@ -254,6 +256,20 @@ export function CommissionsPage() {
       rejectionForm.reset();
     } catch (error) {
       setActionError(error);
+      if (isMutationConflict(error)) setRejecting(null);
+    }
+  }
+
+  async function refreshAfterConflict() {
+    try {
+      await api.list.query.refetch({ throwOnError: true });
+      setActionError(null);
+      setSelected(null);
+      setApproving(null);
+      setRejecting(null);
+      rejectionForm.reset();
+    } catch {
+      // Keep the original conflict visible until a fresh list is available.
     }
   }
 
@@ -443,7 +459,9 @@ export function CommissionsPage() {
               <div className="empty-state-small">لم يرفع البائع إشعار التحويل البنكي بعد.</div>
             )}
 
-            {Boolean(actionError) && (
+            {Boolean(actionError) && (isMutationConflict(actionError) ? (
+              <MutationConflictAlert error={actionError} refreshing={api.list.query.isFetching} onRefresh={refreshAfterConflict} />
+            ) : (
               <div className="alert-box danger" role="alert">
                 <Info aria-hidden="true" size={18} />
                 <p>
@@ -451,7 +469,7 @@ export function CommissionsPage() {
                   {errorMessage(actionError)}
                 </p>
               </div>
-            )}
+            ))}
 
             <div className="decision-actions">
               {selected.status === "paid" && (

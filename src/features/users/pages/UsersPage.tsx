@@ -8,11 +8,12 @@ import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../
 import { Drawer } from "../../../components/ui/Drawer";
 import { FormDialog, SubmitButton, TextareaField, ValidatedForm } from "../../../components/ui/forms";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { MutationConflictAlert } from "../../../components/ui/MutationConflictAlert";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { SensitiveValue } from "../../../components/ui/SensitiveValue";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
-import { ApiError } from "../../../services/http";
+import { ApiError, isMutationConflict } from "../../../services/http";
 import type { AdminAccountIdentity, User } from "../../../types/domain";
 import { useUsers } from "../api/useUsers";
 import { userBanSchema, type UserBanFormValues } from "../schemas/userBanSchema";
@@ -205,6 +206,7 @@ export function UsersPage() {
       banForm.reset();
     } catch (err) {
       setActionError(err);
+      if (isMutationConflict(err)) setBanTarget(null);
     }
   }
 
@@ -226,6 +228,20 @@ export function UsersPage() {
       setUnbanTarget(null);
     } catch (err) {
       setActionError(err);
+      if (isMutationConflict(err)) setUnbanTarget(null);
+    }
+  }
+
+  async function refreshAfterConflict() {
+    try {
+      await api.list.query.refetch({ throwOnError: true });
+      setActionError(null);
+      setSelected(null);
+      setBanTarget(null);
+      setUnbanTarget(null);
+      banForm.reset();
+    } catch {
+      // Keep the original conflict visible until a fresh list is available.
     }
   }
 
@@ -362,7 +378,9 @@ export function UsersPage() {
               </div>
             </dl>
 
-            {Boolean(actionError) && (
+            {Boolean(actionError) && (isMutationConflict(actionError) ? (
+              <MutationConflictAlert error={actionError} refreshing={api.list.query.isFetching} onRefresh={refreshAfterConflict} />
+            ) : (
               <div className="alert-box danger" role="alert">
                 <Info aria-hidden="true" size={18} />
                 <div>
@@ -370,7 +388,7 @@ export function UsersPage() {
                   <p>{errorMessage(actionError)}</p>
                 </div>
               </div>
-            )}
+            ))}
 
             <div className="decision-actions">
               {selected.isBanned ? (

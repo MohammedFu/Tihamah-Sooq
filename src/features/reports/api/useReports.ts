@@ -15,6 +15,7 @@ export function useReports(options: {
 
   const updateReport = useUpdate<ActionRecord, ApiError, { notes: string }>({
     mutationMode: "pessimistic",
+    mutationOptions: { retry: false },
     successNotification: false,
     errorNotification: false,
   });
@@ -25,6 +26,7 @@ export function useReports(options: {
 
   const banUser = useUpdate<ActionRecord, ApiError, BanInput>({
     mutationMode: "pessimistic",
+    mutationOptions: { retry: false },
     successNotification: false,
     errorNotification: false,
   });

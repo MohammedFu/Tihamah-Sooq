@@ -15,11 +15,12 @@ import { AuthorizedButton } from "../../../components/ui/AuthorizedButton";
 import { DataTable, useDataTableUrlState, type DataTableColumn } from "../../../components/ui/DataTable";
 import { Drawer } from "../../../components/ui/Drawer";
 import { FormDialog, SubmitButton, TextareaField, ValidatedForm } from "../../../components/ui/forms";
+import { MutationConflictAlert } from "../../../components/ui/MutationConflictAlert";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { SensitiveValue } from "../../../components/ui/SensitiveValue";
 import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
-import { isApiError } from "../../../services/http";
+import { isApiError, isMutationConflict } from "../../../services/http";
 import type { AdminAccountIdentity, Report, ReportStatus, ReportType, User } from "../../../types/domain";
 import { useDashboardMetrics } from "../../dashboard/api/useDashboardMetrics";
 import { useReports } from "../api/useReports";
@@ -292,6 +293,19 @@ export function ReportsPage() {
       resolutionForm.reset();
     } catch (error) {
       setActionError(error);
+      if (isMutationConflict(error)) setActiveAction(null);
+    }
+  }
+
+  async function refreshAfterConflict() {
+    try {
+      await api.list.query.refetch({ throwOnError: true });
+      setActionError(null);
+      setSelected(null);
+      setActiveAction(null);
+      resolutionForm.reset();
+    } catch {
+      // Keep the original conflict visible until a fresh list is available.
     }
   }
 
@@ -474,7 +488,9 @@ export function ReportsPage() {
               </div>
             )}
 
-            {Boolean(actionError) && (
+            {Boolean(actionError) && (isMutationConflict(actionError) ? (
+              <MutationConflictAlert error={actionError} refreshing={api.list.query.isFetching} onRefresh={refreshAfterConflict} />
+            ) : (
               <div className="alert-box danger" role="alert">
                 <Info aria-hidden="true" size={18} />
                 <p>
@@ -482,7 +498,7 @@ export function ReportsPage() {
                   {errorMessage(actionError)}
                 </p>
               </div>
-            )}
+            ))}
 
             {selected.status === "open" && (
               <div className="moderation-menu">

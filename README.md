@@ -45,6 +45,8 @@ Shared administrative forms use React Hook Form and Zod, accessible field/error 
 
 Feature feedback and Refine mutations share a typed notification queue with success, error, warning, information, and persistent progress states. The retry and high-risk mutation rules are documented in [the notification guide](./docs/NOTIFICATIONS.md).
 
+Vitest covers executable source with enforced V8 coverage floors, while Playwright owns cross-route browser workflows. Commands, deterministic fixture rules, thresholds, and test-scope boundaries are documented in [the testing guide](./docs/TESTING.md).
+
 Accessibility checks cover WCAG A/AA automation on login, every protected route, and interactive overlays at mobile and desktop widths. Shared navigation, dialogs, drawers, route headings, tabs, upload controls, reduced motion, contrast, RTL reading order, and LTR operational values follow the keyboard and verification rules in [the accessibility guide](./docs/ACCESSIBILITY.md).
 
 ## Development
@@ -91,4 +93,4 @@ Fixture mode accepts either documented identifier with the development-only pass
 | Phone | `+966500000000` |
 | Password | `Admin@123456` |
 
-The dashboard metrics, listing moderation, and confirmed system operations read their backend contracts through Refine in fixture or remote mode. The system route supports global broadcast review, general and SMS settings, OTP confirmation, secret redaction, and a local read-only audit adapter; targeted broadcasts, live SMS tests, and remote audit listing remain visibly blocked by incomplete backend contracts. See [the system operations guide](./docs/SYSTEM_OPERATIONS.md), [listing moderation guide](./docs/LISTING_MODERATION.md), [dashboard metrics guide](./docs/DASHBOARD_METRICS.md), and [administrative data contract](./docs/ADMIN_DATA.md). Task status and the next dependency-safe step are tracked in [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md).
+The dashboard metrics, listing moderation, and confirmed system operations read their backend contracts through Refine in fixture or remote mode. The system route supports global broadcast review, general and SMS settings, OTP confirmation, secret redaction, and a local read-only audit adapter; targeted broadcasts, live SMS tests, and remote audit listing remain visibly blocked by incomplete backend contracts. High-risk decisions are pessimistic and expose a refresh-and-review flow for `409`/`412` responses, while server-enforced version preconditions remain an explicit contract gap. See [the concurrency guide](./docs/CONCURRENCY.md), [system operations guide](./docs/SYSTEM_OPERATIONS.md), [listing moderation guide](./docs/LISTING_MODERATION.md), [dashboard metrics guide](./docs/DASHBOARD_METRICS.md), and [administrative data contract](./docs/ADMIN_DATA.md). Task status and the next dependency-safe step are tracked in [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md).

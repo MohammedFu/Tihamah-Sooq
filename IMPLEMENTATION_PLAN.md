@@ -66,10 +66,11 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 13. The dashboard analysis names `/api/v1/admin/dashboard/stats`, Redis caching, and richer growth/OTP counters. The executable router, handler, DTO, Swagger, and Postman instead confirm `GET /api/v1/admin/stats` with eight aggregate fields, no server timestamp, and no confirmed queue-summary route. T17 uses the executable contract, treats extensions as unavailable when omitted, and reports only client fetch freshness.
 14. T18 confirmed that the executable ad repository defaults an omitted `status` to `active`, so it cannot provide a trustworthy all-status page. `dto.UpdateAdStatusRequest` accepts only `status`; rejection reason, moderator/timestamp metadata, record versions/conditional writes, and restore-after-delete are absent. The dashboard uses one explicit status at a time, requires but does not claim to persist a rejection reason, and labels DELETE as soft-delete/hide. The live Swagger document does not currently publish the registered admin-ad routes and should be regenerated.
 15. Swagger confirms `POST /api/v1/media/presign` with `{ filename, media_type }` and top-level `upload_url`/`media_url`, but Postman authenticates it with `client_token`; administrator-token authorization is not explicitly confirmed. The documents also omit the direct object-storage method and required signed headers. T28 isolates conventional S3 `PUT` behavior behind an injectable transport and must not wire remote feature uploads until both details are confirmed.
+16. Marketplace entities expose `updated_at`, but Swagger, Postman, and the documented administrator mutations define no opaque version/ETag, conditional header, or stale-write response contract. T30 handles `409`/`412` safely on the client without inventing a precondition, but preventing silent overwrites remains backend-dependent.
 
 ## 5. Current Baseline
 
-As of 2026-09-09:
+As of 2026-09-10:
 
 - The React/TypeScript/Vite/Refine project exists independently in `D:\dashboard\Tihamah-Sooq`.
 - The application has an Arabic RTL responsive shell, sidebar, header, badges, drawers, modals, toasts, and shared styling.
@@ -87,7 +88,9 @@ As of 2026-09-09:
 - Feature feedback and Refine mutations now share one typed, accessible notification queue with success, error, warning, information, and persistent progress states. Page-local toast timers have been removed, and promise tracking prevents high-risk actions from reporting success before resolution. Details are documented in `docs/NOTIFICATIONS.md`.
 - T27 attaches end-to-end correlation tracking (`X-Correlation-Id`, `X-Request-Id`) to every request with cryptographic fallback and error diagnostics retention. Notifications and error displays surface `requestId` for operator troubleshooting. Mutations commit immutable audit trails with acting administrator attribution only after server confirmation, and the system audit table provides real-time search across action names, entities, admins, and mutation metadata. Remote audit fails closed (`UNCONFIRMED_ADMIN_CONTRACT`) per Contract Gap 5. Details are documented in `docs/AUDIT_METADATA.md`.
 - T29 enforces masking by default for sensitive operational data (phone numbers, emails, IBANs, bank references, secrets) with bidirectional `<bdi dir="ltr">` isolation. The permission-aware `SensitiveValue` component gates reveal controls behind Refine RBAC, while settings remain write-only and error/log sanitization prevents credential leaks. Details are documented in `docs/SENSITIVE_DATA.md`.
-- Verification now includes 295 passing unit/component/provider tests across 49 test files and 26 passing Playwright workflows, including listing moderation transitions, dashboard metric screenshots and filter-link checks, axe-core WCAG A/AA scans of login and all nine routes at 390/1440 px, interactive overlay scans, keyboard focus flows, 320 CSS-pixel reflow, all-route design-system/overflow checks, responsive data tables, identity/provider checks, limited-role enforcement, session expiry, safe reauthentication, and requested-route restoration. Production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
+- T30 now treats rejected high-risk `409`/`412` writes as review-required conflicts: it never retries or applies them locally, refreshes only affected caches, surfaces request IDs, and lets operators reload the current scoped list without losing URL-backed filters. Server-enforced version preconditions remain unconfirmed. Details are documented in `docs/CONCURRENCY.md`.
+- T31 provides deterministic Vitest/jsdom infrastructure, isolated authentication and marketplace fixture builders, and V8 coverage reporting over executable source. Global floors enforce 80% statements, 75% branches, 80% functions, and 80% lines. Details are documented in `docs/TESTING.md`.
+- Verification now includes 304 passing unit/component/provider tests across 52 test files and 26 previously passing Playwright workflows; the new T30 browser scenario completed all assertions before the known Windows post-test teardown stall required terminating the runner. V8 coverage measures 81.60% statements, 77.76% branches, 85.87% functions, and 85.22% lines. Coverage includes listing moderation transitions, stale-decision recovery, dashboard metric screenshots and filter-link checks, axe-core WCAG A/AA scans of login and all nine routes at 390/1440 px, interactive overlay scans, keyboard focus flows, 320 CSS-pixel reflow, all-route design-system/overflow checks, responsive data tables, identity/provider checks, limited-role enforcement, session expiry, safe reauthentication, and requested-route restoration. Production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
 
 ## 6. Target Source Structure
 
@@ -516,7 +519,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T30 - Handle concurrency and stale records
 
-- **Status:** TODO
+- **Status:** PARTIAL; client conflict recovery is implemented, while server-enforced version/conditional-write support remains unconfirmed.
 - **Priority:** P0
 - **Depends on:** T04-T05
 - **Objective:** Prevent two administrators from silently applying conflicting moderation or financial decisions.
@@ -524,12 +527,13 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** HTTP client, mutation hooks, confirmation dialogs.
 - **Acceptance:** Financial and ban decisions are pessimistic; stale data never overwrites newer server state; administrators can reload the affected record without losing unrelated filters.
 - **Verification:** Concurrent-mutation service and end-to-end tests.
+- **Progress note (2026-09-10):** Confirmed that the executable Swagger/Postman contract exposes entity `updated_at` values but no ETag, opaque version, conditional request header, or stale-write response schema, so the dashboard does not invent a precondition. Added shared classification for `409`, `412`, and explicit stale/version codes; high-risk listing, ban, commission, and report mutations are pessimistic with retries disabled. A rejected conflict never updates local state or resubmits the decision, triggers only affected-cache invalidation, exposes the correlation/request ID, closes the stale action overlay, and offers a scoped refresh-and-review action that preserves URL-backed filters. Catalog dependency conflicts retain their feature-specific behavior. Added `docs/CONCURRENCY.md`, HTTP/helper/component/provider/page tests, and a Playwright stale-listing workflow. `npm run lint`, all 304 Vitest tests across 52 files, and `npm run build` passed. The focused browser workflow completed every assertion at 390 and 1440 px, including single-dispatch, filter preservation, and no page-level overflow, before the documented Windows Playwright teardown stall required stopping the runner. T30 remains PARTIAL until the backend guarantees conditional writes and supports live two-administrator integration testing.
 
 ## 13. Phase 6: Testing, CI, And Delivery
 
 ### T31 - Add unit testing infrastructure
 
-- **Status:** PARTIAL; Vitest, jsdom, shared setup, auth fixtures, and auth unit tests are configured. Coverage configuration and tests for the remaining domains are still TODO.
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T02-T05
 - **Objective:** Cover pure logic and contracts quickly.
@@ -537,6 +541,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `vitest.config.ts`, `src/test/setup.ts`, colocated `*.test.ts` files.
 - **Acceptance:** Tests are deterministic, avoid production network calls, and cover critical branches rather than chasing a superficial percentage.
 - **Verification:** Add `npm run test` and `npm run test:coverage` scripts and run both.
+- **Completion note (2026-09-10):** Completed the existing Vitest/jsdom setup with the matching `@vitest/coverage-v8` provider, a dedicated `npm run test:coverage` command, ignored console/JSON/HTML report output, and global regression floors of 80% statements, 75% branches, 80% functions, and 80% lines across executable `src` modules. Confirmed that `createAuthFixture`, `createAdminFixtureData`, and `createFixtureAdminServices` provide fresh isolated authentication/domain/service graphs and documented when unit, component, and browser fixtures should be used in `docs/TESTING.md`. The contract audit reconfirmed the executable listing, commission, and report status vocabulary; existing suites cover mappers, environment parsing, query serialization, permissions, transitions, date helpers, commission calculations, validation, and failure boundaries. `npm run test:coverage` passed all 304 tests across 52 files at 81.60% statements, 77.76% branches, 85.87% functions, and 85.22% lines; the ordinary suite, lint, and production build also pass. Installation reported zero package vulnerabilities.
 
 ### T32 - Add component tests
 

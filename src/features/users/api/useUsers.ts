@@ -15,6 +15,7 @@ export function useUsers(options: {
   const runAction = useAdminAction();
   const update = useUpdate<UserActionRecord, ApiError, BanInput>({
     mutationMode: "pessimistic",
+    mutationOptions: { retry: false },
     successNotification: false,
     errorNotification: false,
   });

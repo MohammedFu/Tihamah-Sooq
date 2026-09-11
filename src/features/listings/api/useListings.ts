@@ -17,6 +17,7 @@ export function useListings(options: {
   const runAction = useAdminAction();
   const update = useUpdate<ListingActionRecord, ApiError, ModerationInput>({
     mutationMode: "pessimistic",
+    mutationOptions: { retry: false },
     successNotification: false,
     errorNotification: false,
   });

@@ -143,3 +143,20 @@ export function createEnvelopeError(payload: unknown, response: Response, fallba
 export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
 }
+
+const MUTATION_CONFLICT_CODES = new Set([
+  "CONFLICT",
+  "PRECONDITION_FAILED",
+  "STALE_RECORD",
+  "VERSION_CONFLICT",
+]);
+
+/** Identifies a rejected write that requires a fresh server snapshot. */
+export function isMutationConflict(error: unknown): error is ApiError {
+  return isApiError(error) && (
+    error.kind === "conflict"
+    || error.status === 409
+    || error.status === 412
+    || MUTATION_CONFLICT_CODES.has(error.code)
+  );
+}

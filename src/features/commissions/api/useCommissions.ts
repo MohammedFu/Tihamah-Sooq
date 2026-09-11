@@ -12,6 +12,7 @@ export function useCommissions(options: {
   const runAction = useAdminAction();
   const update = useUpdate<Commission, ApiError, VerificationInput>({
     mutationMode: "pessimistic",
+    mutationOptions: { retry: false },
     successNotification: false,
     errorNotification: false,
   });
