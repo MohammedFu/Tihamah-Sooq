@@ -19,6 +19,16 @@ The detailed production roadmap and new-chat handoff are maintained in [`IMPLEME
 | `/banners` | Banner targeting, scheduling, and ordering |
 | `/system` | Global notification broadcasts, OTP/SMS settings, and read-only audit visibility |
 
+## Design & Usability Enhancements
+
+- **Multi-Theme Engine:** Rural Night (dark mode), Tihamah Day (light mode), and system theme synchronization with strictly enforced semantic CSS tokens (`tokens.css`). See [Themes Guide](./docs/THEMES.md).
+- **Bilingual RTL/LTR Sweep:** Dynamic layout direction and localized dictionaries for Arabic and English with 100% test-verified key parity. See [Localization Guide](./docs/I18N_LOCALIZATION.md).
+- **Global Command Palette (`⌘K` / `Ctrl+K`):** Fast keyboard-driven navigation across all dashboard sections and queues with search filtering.
+- **Interactive Notification Center:** Real-time operational alert feeds with unread badge counter, filtering tabs, and quick queue links.
+- **Interactive SVG Analytics Charts:** Responsive listing growth area chart and 1% commission revenue bar chart with hover tooltips.
+- **Universal CSV Data Table Export:** One-click CSV export across all data tables with UTF-8 Byte Order Mark (`\uFEFF`) for Arabic Excel compatibility.
+- **Accessible Breadcrumb Navigation:** Semantic breadcrumbs reflecting current route hierarchy in Arabic and English.
+
 ## Project Structure
 
 - `src/app`: Refine setup, route registration, and resource definitions.

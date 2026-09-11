@@ -78,3 +78,107 @@
   --transition-fast: 150ms ease;
   --transition-base: 200ms ease;
 }
+
+[data-theme="dark"] {
+  /* Tihamah Rural Night palette */
+  --color-canvas: #0b1712;
+  --color-surface: #13251c;
+  --color-surface-92: rgb(19 37 28 / 92%);
+  --color-surface-96: rgb(19 37 28 / 96%);
+  --color-surface-subtle: #193025;
+  --color-surface-muted: #203c2e;
+  --color-text: #e8f1ec;
+  --color-text-body: #c2d6cb;
+  --color-text-muted: #8ea89a;
+  --color-text-subtle: #799587;
+  --color-border: #234033;
+  --color-border-strong: #2f5242;
+  --color-primary: #f59e0b;
+  --color-primary-hover: #fbbf24;
+  --color-primary-soft: rgb(245 158 11 / 15%);
+  --color-primary-border: rgb(245 158 11 / 30%);
+  --color-secondary: #34d399;
+  --color-secondary-hover: #2ec486;
+  --color-secondary-soft: rgb(52 211 153 / 15%);
+  --color-focus: #f59e0b;
+  --color-focus-ring: #f59e0b;
+  --color-overlay: rgb(5 15 10 / 65%);
+  --color-overlay-strong: rgb(5 15 10 / 90%);
+  --color-success: #34d399;
+  --color-success-soft: rgb(52 211 153 / 15%);
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgb(251 191 36 / 15%);
+  --color-danger: #f87171;
+  --color-danger-hover: #ef4444;
+  --color-danger-soft: rgb(248 113 113 / 15%);
+  --color-danger-border: rgb(248 113 113 / 30%);
+  --color-info: #38bdf8;
+  --color-info-soft: rgb(56 189 248 / 15%);
+  --color-violet: #a78bfa;
+  --color-violet-soft: rgb(167 139 250 / 15%);
+
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 25%);
+  --shadow-sm: 0 6px 16px rgb(0 0 0 / 35%);
+  --shadow-md: 0 12px 30px rgb(0 0 0 / 45%);
+  --shadow-lg: 0 20px 50px rgb(0 0 0 / 55%);
+  --shadow-color-xs: rgb(0 0 0 / 20%);
+  --shadow-color-sm: rgb(0 0 0 / 30%);
+  --shadow-color-base: rgb(0 0 0 / 35%);
+  --shadow-color-md: rgb(0 0 0 / 45%);
+  --shadow-color-strong: rgb(0 0 0 / 50%);
+  --shadow-color-lg: rgb(0 0 0 / 60%);
+  --shadow-color-xl: rgb(0 0 0 / 70%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-canvas: #0b1712;
+    --color-surface: #13251c;
+    --color-surface-92: rgb(19 37 28 / 92%);
+    --color-surface-96: rgb(19 37 28 / 96%);
+    --color-surface-subtle: #193025;
+    --color-surface-muted: #203c2e;
+    --color-text: #e8f1ec;
+    --color-text-body: #c2d6cb;
+    --color-text-muted: #8ea89a;
+    --color-text-subtle: #799587;
+    --color-border: #234033;
+    --color-border-strong: #2f5242;
+    --color-primary: #f59e0b;
+    --color-primary-hover: #fbbf24;
+    --color-primary-soft: rgb(245 158 11 / 15%);
+    --color-primary-border: rgb(245 158 11 / 30%);
+    --color-secondary: #34d399;
+    --color-secondary-hover: #2ec486;
+    --color-secondary-soft: rgb(52 211 153 / 15%);
+    --color-focus: #f59e0b;
+    --color-focus-ring: #f59e0b;
+    --color-overlay: rgb(5 15 10 / 65%);
+    --color-overlay-strong: rgb(5 15 10 / 90%);
+    --color-success: #34d399;
+    --color-success-soft: rgb(52 211 153 / 15%);
+    --color-warning: #fbbf24;
+    --color-warning-soft: rgb(251 191 36 / 15%);
+    --color-danger: #f87171;
+    --color-danger-hover: #ef4444;
+    --color-danger-soft: rgb(248 113 113 / 15%);
+    --color-danger-border: rgb(248 113 113 / 30%);
+    --color-info: #38bdf8;
+    --color-info-soft: rgb(56 189 248 / 15%);
+    --color-violet: #a78bfa;
+    --color-violet-soft: rgb(167 139 250 / 15%);
+
+    --shadow-xs: 0 1px 2px rgb(0 0 0 / 25%);
+    --shadow-sm: 0 6px 16px rgb(0 0 0 / 35%);
+    --shadow-md: 0 12px 30px rgb(0 0 0 / 45%);
+    --shadow-lg: 0 20px 50px rgb(0 0 0 / 55%);
+    --shadow-color-xs: rgb(0 0 0 / 20%);
+    --shadow-color-sm: rgb(0 0 0 / 30%);
+    --shadow-color-base: rgb(0 0 0 / 35%);
+    --shadow-color-md: rgb(0 0 0 / 45%);
+    --shadow-color-strong: rgb(0 0 0 / 50%);
+    --shadow-color-lg: rgb(0 0 0 / 60%);
+    --shadow-color-xl: rgb(0 0 0 / 70%);
+  }
+}
+

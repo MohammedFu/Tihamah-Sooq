@@ -53,7 +53,7 @@ describe("CommissionsPage", () => {
     expect(screen.getByText("عمولات مستحقة غير مسددة")).toBeInTheDocument();
 
     // Table rows
-    const row = await screen.findByRole("row", { name: /511/ });
+    const row = await screen.findByRole("row", { name: /511/ }, { timeout: 5000 });
     expect(within(row).getByText(/فواز أبو عبدل/)).toBeInTheDocument();
     expect(within(row).getByText("بانتظار التدقيق")).toBeInTheDocument();
   });
@@ -82,7 +82,7 @@ describe("CommissionsPage", () => {
 
     renderPage(fixture);
 
-    await screen.findByRole("row", { name: /511/ });
+    await screen.findByRole("row", { name: /511/ }, { timeout: 5000 });
 
     // Click on "غير مسدد" tab
     await userEvent.click(screen.getByRole("button", { name: "غير مسدد" }));

@@ -14,8 +14,23 @@ import { FormDialog, SelectField, SubmitButton, TextareaField, ValidatedForm } f
 import { useAdminNotification } from "../../../providers/notificationStore";
 import { isApiError, isMutationConflict } from "../../../services/http";
 import type { Listing, ListingMedia, ListingStatus } from "../../../types/domain";
+import { ExportButton, type CsvColumn } from "../../../utils/exportUtils";
 import { useListings } from "../api/useListings";
 import { listingRejectionSchema, type ListingRejectionValues } from "../schemas/listingModerationSchema";
+
+const listingExportColumns: CsvColumn<Listing>[] = [
+  { header: "رقم الإعلان", accessor: (l) => l.id },
+  { header: "عنوان الإعلان", accessor: (l) => l.title },
+  { header: "السعر", accessor: (l) => l.price },
+  { header: "الحالة", accessor: (l) => l.status },
+  { header: "المعلن", accessor: (l) => l.seller?.fullName ?? "غير متاح" },
+  { header: "جوال المعلن", accessor: (l) => l.seller?.phone ?? "غير متاح" },
+  { header: "القسم", accessor: (l) => l.category?.name ?? "غير متاح" },
+  { header: "المنطقة", accessor: (l) => l.region?.name ?? "غير متاح" },
+  { header: "القرية", accessor: (l) => l.village?.name ?? "غير متاح" },
+  { header: "المشاهدات", accessor: (l) => l.viewCount ?? 0 },
+  { header: "تاريخ النشر", accessor: (l) => l.createdAt },
+];
 
 const statusFilters: Array<{ label: string; value: ListingStatus }> = [
   { label: "قيد المراجعة", value: "pending_review" },
@@ -169,7 +184,27 @@ export function ListingsPage() {
           pagination={{ page: table.page, pageSize: table.pageSize, total, pageSizeOptions: table.pageSizeOptions }}
           onPageChange={table.setPage}
           onPageSizeChange={table.setPageSize}
-          toolbar={<div className="filters-row"><label className="field-with-icon"><Search aria-hidden="true" size={16} /><input value={table.search} onChange={(event) => table.setSearch(event.target.value)} placeholder="بحث بعنوان الإعلان أو وصفه" aria-label="البحث في الإعلانات" /></label><span className="record-count">{total.toLocaleString("ar-SA")} إعلان</span></div>}
+          toolbar={
+            <div className="filters-row">
+              <label className="field-with-icon">
+                <Search aria-hidden="true" size={16} />
+                <input
+                  value={table.search}
+                  onChange={(event) => table.setSearch(event.target.value)}
+                  placeholder="بحث بعنوان الإعلان أو وصفه"
+                  aria-label="البحث في الإعلانات"
+                />
+              </label>
+              <div className="table-actions-group">
+                <span className="record-count">{total.toLocaleString("ar-SA")} إعلان</span>
+                <ExportButton
+                  filename={`tihamah-listings-${status}`}
+                  data={rows}
+                  columns={listingExportColumns}
+                />
+              </div>
+            </div>
+          }
         />
       </section>
 

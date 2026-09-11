@@ -15,8 +15,19 @@ import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
 import { ApiError, isMutationConflict } from "../../../services/http";
 import type { AdminAccountIdentity, User } from "../../../types/domain";
+import { ExportButton, type CsvColumn } from "../../../utils/exportUtils";
 import { useUsers } from "../api/useUsers";
 import { userBanSchema, type UserBanFormValues } from "../schemas/userBanSchema";
+
+const userExportColumns: CsvColumn<User>[] = [
+  { header: "رقم المستخدم", accessor: (u) => u.id },
+  { header: "الاسم الكامل", accessor: (u) => u.fullName },
+  { header: "رقم الجوال", accessor: (u) => u.phone },
+  { header: "المنطقة", accessor: (u) => u.regionName ?? u.region?.name ?? "" },
+  { header: "القرية", accessor: (u) => u.villageName ?? u.village?.name ?? "" },
+  { header: "الحالة", accessor: (u) => (u.isBanned ? "محظور" : "نشط") },
+  { header: "تاريخ التسجيل", accessor: (u) => u.createdAt },
+];
 
 const statusFilters = [
   { value: "all", label: "كل الحسابات" },
@@ -301,7 +312,14 @@ export function UsersPage() {
                   aria-label="البحث في المستخدمين"
                 />
               </label>
-              <span className="record-count">{total.toLocaleString("ar-SA")} مستخدم</span>
+              <div className="table-actions-group">
+                <span className="record-count">{total.toLocaleString("ar-SA")} مستخدم</span>
+                <ExportButton
+                  filename={`tihamah-users-${status}`}
+                  data={rows}
+                  columns={userExportColumns}
+                />
+              </div>
             </div>
           }
         />
