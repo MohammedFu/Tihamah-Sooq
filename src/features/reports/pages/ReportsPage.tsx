@@ -22,6 +22,7 @@ import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
 import { isApiError, isMutationConflict } from "../../../services/http";
 import type { AdminAccountIdentity, Report, ReportStatus, ReportType, User } from "../../../types/domain";
+import { ExportButton, type CsvColumn } from "../../../utils/exportUtils";
 import { useDashboardMetrics } from "../../dashboard/api/useDashboardMetrics";
 import { useReports } from "../api/useReports";
 import {
@@ -35,6 +36,16 @@ import {
   reportTypeBadgeClass,
   reportTypeLabel,
 } from "../utils/reportHelpers";
+
+const reportExportColumns: CsvColumn<Report>[] = [
+  { header: "رقم البلاغ", accessor: (r) => r.id },
+  { header: "نوع البلاغ", accessor: (r) => reportTypeLabel(r.type) },
+  { header: "السبب والملاحظات", accessor: (r) => r.reason },
+  { header: "المُبلّغ", accessor: (r) => r.reporter?.fullName ?? "" },
+  { header: "رقم الإعلان المُبلّغ عنه", accessor: (r) => r.listingId ?? "" },
+  { header: "الحالة", accessor: (r) => (r.status === "resolved" ? "مغلق" : "مفتوح") },
+  { header: "تاريخ البلاغ", accessor: (r) => r.createdAt },
+];
 
 const statusFilters: Array<{ label: string; value: "all" | ReportStatus }> = [
   { label: "مفتوحة", value: "open" },
@@ -394,7 +405,14 @@ export function ReportsPage() {
                 ))}
               </select>
 
-              <span className="record-count">{total.toLocaleString("ar-SA")} بلاغ</span>
+              <div className="table-actions-group">
+                <span className="record-count">{total.toLocaleString("ar-SA")} بلاغ</span>
+                <ExportButton
+                  filename={`tihamah-reports-${status}`}
+                  data={rows}
+                  columns={reportExportColumns}
+                />
+              </div>
             </div>
           }
         />

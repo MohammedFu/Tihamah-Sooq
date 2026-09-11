@@ -25,6 +25,7 @@ import { StatusBadge } from "../../../components/ui/StatusBadge";
 import { useAdminNotification } from "../../../providers/notificationStore";
 import { isApiError, isMutationConflict } from "../../../services/http";
 import type { Commission, CommissionStatus } from "../../../types/domain";
+import { ExportButton, type CsvColumn } from "../../../utils/exportUtils";
 import { useDashboardMetrics } from "../../dashboard/api/useDashboardMetrics";
 import { useCommissions } from "../api/useCommissions";
 import {
@@ -37,6 +38,18 @@ import {
   formatCurrency,
   isCommissionMismatch,
 } from "../utils/commissionCalculations";
+
+const commissionExportColumns: CsvColumn<Commission>[] = [
+  { header: "رقم الفاتورة", accessor: (c) => c.id },
+  { header: "رقم الإعلان", accessor: (c) => c.listingId },
+  { header: "عنوان الإعلان", accessor: (c) => c.listing?.title ?? "" },
+  { header: "البائع", accessor: (c) => c.seller?.fullName ?? "" },
+  { header: "جوال البائع", accessor: (c) => c.seller?.phone ?? "" },
+  { header: "قيمة البيع", accessor: (c) => c.soldPrice ?? c.listing?.price ?? 0 },
+  { header: "العمولة 1%", accessor: (c) => c.amount },
+  { header: "الحالة", accessor: (c) => c.status },
+  { header: "تاريخ الفاتورة", accessor: (c) => c.createdAt },
+];
 
 const statusFilters: Array<{ label: string; value: "all" | CommissionStatus }> = [
   { label: "كل الحالات", value: "all" },
@@ -344,7 +357,14 @@ export function CommissionsPage() {
                   aria-label="البحث في العمولات"
                 />
               </label>
-              <span className="record-count">{total.toLocaleString("ar-SA")} سجل عمولة</span>
+              <div className="table-actions-group">
+                <span className="record-count">{total.toLocaleString("ar-SA")} سجل عمولة</span>
+                <ExportButton
+                  filename={`tihamah-commissions-${status}`}
+                  data={rows}
+                  columns={commissionExportColumns}
+                />
+              </div>
             </div>
           }
         />

@@ -10,6 +10,8 @@ export type DataTableColumn<TRecord> = Readonly<{
   className?: string;
   sortable?: boolean;
   sortField?: string;
+  exportValue?: (record: TRecord) => string | number | boolean | null | undefined;
+  exportable?: boolean;
 }>;
 
 export type DataTablePagination = Readonly<{
@@ -35,4 +37,6 @@ export type DataTableProps<TRecord> = Readonly<{
   pagination?: DataTablePagination;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
+  exportFilename?: string;
+  onExport?: () => void;
 }>;

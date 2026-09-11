@@ -101,10 +101,10 @@ test("drawers and editor dialogs have no automated WCAG A/AA violations", async 
   }
 
   const drawers = [
-    { route: "/listings", action: "عرض التفاصيل" },
-    { route: "/users", action: "عرض المستخدم" },
-    { route: "/commissions", action: "تدقيق العمولة" },
-    { route: "/reports", action: "عرض البلاغ" },
+    { route: "/listings", action: /^عرض تفاصيل الإعلان / },
+    { route: "/users", action: /^عرض بيانات / },
+    { route: "/commissions", action: /^تدقيق عمولة الفاتورة / },
+    { route: "/reports", action: /^عرض تفاصيل البلاغ / },
   ] as const;
   for (const drawer of drawers) {
     await page.goto(drawer.route, { waitUntil: "domcontentloaded" });

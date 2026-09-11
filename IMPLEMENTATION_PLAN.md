@@ -70,7 +70,7 @@ Do not silently guess when a destructive or financial endpoint is missing. Keep 
 
 ## 5. Current Baseline
 
-As of 2026-09-10:
+As of 2026-09-11:
 
 - The React/TypeScript/Vite/Refine project exists independently in `D:\dashboard\Tihamah-Sooq`.
 - The application has an Arabic RTL responsive shell, sidebar, header, badges, drawers, modals, toasts, and shared styling.
@@ -90,7 +90,7 @@ As of 2026-09-10:
 - T29 enforces masking by default for sensitive operational data (phone numbers, emails, IBANs, bank references, secrets) with bidirectional `<bdi dir="ltr">` isolation. The permission-aware `SensitiveValue` component gates reveal controls behind Refine RBAC, while settings remain write-only and error/log sanitization prevents credential leaks. Details are documented in `docs/SENSITIVE_DATA.md`.
 - T30 now treats rejected high-risk `409`/`412` writes as review-required conflicts: it never retries or applies them locally, refreshes only affected caches, surfaces request IDs, and lets operators reload the current scoped list without losing URL-backed filters. Server-enforced version preconditions remain unconfirmed. Details are documented in `docs/CONCURRENCY.md`.
 - T31 provides deterministic Vitest/jsdom infrastructure, isolated authentication and marketplace fixture builders, and V8 coverage reporting over executable source. Global floors enforce 80% statements, 75% branches, 80% functions, and 80% lines. Details are documented in `docs/TESTING.md`.
-- Verification now includes 304 passing unit/component/provider tests across 52 test files and 26 previously passing Playwright workflows; the new T30 browser scenario completed all assertions before the known Windows post-test teardown stall required terminating the runner. V8 coverage measures 81.60% statements, 77.76% branches, 85.87% functions, and 85.22% lines. Coverage includes listing moderation transitions, stale-decision recovery, dashboard metric screenshots and filter-link checks, axe-core WCAG A/AA scans of login and all nine routes at 390/1440 px, interactive overlay scans, keyboard focus flows, 320 CSS-pixel reflow, all-route design-system/overflow checks, responsive data tables, identity/provider checks, limited-role enforcement, session expiry, safe reauthentication, and requested-route restoration. Production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
+- Verification now includes 306 passing unit/component/provider tests across 53 test files and 34 passing fixture-mode Playwright workflows, with one opt-in real-backend smoke test skipped by default. V8 coverage measures 82.84% statements, 78.64% branches, 87.01% functions, and 86.64% lines. Coverage includes composed dashboard navigation, all critical administrator mutations, listing moderation transitions, stale-decision recovery, dashboard metric screenshots and filter-link checks, axe-core WCAG A/AA scans of login and all nine routes at 390/1440 px, interactive overlay scans, keyboard focus flows, 320 CSS-pixel reflow, all-route design-system/overflow checks, responsive data tables, identity/provider checks, limited-role enforcement, session expiry, safe reauthentication, and requested-route restoration. Production builds pass with a Vite chunk-size advisory; no live backend mutations were exercised.
 
 ## 6. Target Source Structure
 
@@ -545,7 +545,7 @@ Update the status in this document after completing each task. Do not mark a pro
 
 ### T32 - Add component tests
 
-- **Status:** PARTIAL; React Testing Library and user-event cover the login form. Shared controls and remaining feature interactions are still TODO.
+- **Status:** DONE
 - **Priority:** P1
 - **Depends on:** T13-T16, T31
 - **Objective:** Verify shared controls and high-risk feature interactions from the user’s perspective.
@@ -553,10 +553,11 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** Colocated `*.test.tsx` files and test render helpers.
 - **Acceptance:** Tests query accessible names instead of implementation classes; focus restoration and keyboard interaction are covered.
 - **Verification:** Run component suite in CI-compatible headless mode.
+- **Completion note (2026-09-11):** Audited and completed the existing React Testing Library/user-event coverage across authentication, all nine feature pages, server tables and filters, drawers, dialogs, validation, media uploads, notifications, permission-aware controls, and high-risk workflows. Added composed `DashboardLayout` navigation tests for mobile modal semantics, inert background content, Escape dismissal, focus restoration, permission-filtered destinations, and route-heading focus transfer. Capped Vitest at two isolated workers to prevent Windows/CI fork exhaustion and hardened two asynchronous commission assertions for coverage-instrumented runs. Tests use accessible roles/names and isolated fixture services without live backend or external media requests. `npm test` and `npm run test:coverage` passed all 306 tests across 53 files; V8 coverage reached 82.84% statements, 78.64% branches, 87.01% functions, and 86.64% lines. `npm run lint` and the production build also pass. The coverage map and deterministic-test boundary are documented in `docs/TESTING.md`.
 
 ### T33 - Add end-to-end workflow tests
 
-- **Status:** PARTIAL; Playwright and a deterministic fixture-mode authentication workflow are configured. The remaining administrator workflows are still TODO.
+- **Status:** DONE
 - **Priority:** P0
 - **Depends on:** T06-T30, T31
 - **Objective:** Protect the nine administrator journeys across routing, providers, and mutation feedback.
@@ -564,6 +565,7 @@ Update the status in this document after completing each task. Do not mark a pro
 - **Primary files:** `playwright.config.ts`, `e2e/*.spec.ts`, mock API support.
 - **Acceptance:** Critical tests run independently and produce traces/screenshots only on failure; no test depends on external image hosts.
 - **Verification:** Add and run `npm run test:e2e`.
+- **Completion note (2026-09-12):** Completed the deterministic Playwright workflow matrix across authentication/logout, dashboard refresh and queue links, listing decisions and stale-conflict recovery, user ban/unban with required reason, one-percent commission verification, documented report resolution, region/village hierarchy creation, Arabic category create/edit, confirmed banner-field create/edit, all-user broadcast review/confirmation, limited-role enforcement, and stored-session expiry. Added shared fixture browser support that permits only the local Vite origin, fulfills external images with an in-memory SVG, and aborts every other external request, so critical tests remain independent of backend/CDN availability. Updated older access-control, accessibility, authentication, and URL-table scenarios to use the current contextual accessible names, button-based filters, and explicit budgets for composed workflows. Playwright retains screenshots only on failure and traces only on failure. `npm run lint` and `npm run test:e2e` pass: 34 browser tests passed and the single opt-in real-backend smoke test was skipped as designed. The production build also passes with its existing chunk-size advisory. The workflow boundary and coverage map are documented in `docs/TESTING.md`.
 
 ### T34 - Add responsive visual verification
 

@@ -40,14 +40,15 @@ test("restores URL table state and resets pagination after search, filtering and
   await page.goto("/users?status=banned&q=%D8%A3%D8%AD%D9%85%D8%AF&page=3&limit=20", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByLabel("البحث في المستخدمين")).toHaveValue("أحمد");
-  await expect(page.getByLabel("تصفية حالة الحساب")).toHaveValue("banned");
-  await expect(page).not.toHaveURL(/page=3/);
-  await expect(page.getByText("أحمد علي", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "الحسابات المحظورة" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page).toHaveURL(/page=3/);
 
-  await page.getByLabel("البحث في المستخدمين").fill("صالح");
-  await expect(page).toHaveURL(/q=%D8%B5%D8%A7%D9%84%D8%AD/);
-  await page.getByLabel("تصفية حالة الحساب").selectOption("active");
+  await page.getByLabel("البحث في المستخدمين").fill("فواز");
+  await expect(page).toHaveURL(/q=%D9%81%D9%88%D8%A7%D8%B2/);
+  await expect(page).not.toHaveURL(/page=3/);
+  await page.getByRole("button", { name: "الحسابات النشطة" }).click();
   await expect(page).toHaveURL(/status=active/);
+  await expect(page.getByText("فواز أبو عبدل", { exact: true })).toBeVisible();
 
   await page.goto("/listings?page=2", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "السعر" }).click();

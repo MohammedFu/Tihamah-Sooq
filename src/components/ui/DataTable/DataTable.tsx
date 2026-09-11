@@ -1,5 +1,7 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Download, RefreshCw } from "lucide-react";
+import { useI18n } from "../../../i18n/I18nContext";
 import { isApiError } from "../../../services/http";
+import { exportToCsv, type CsvColumn } from "../../../utils/exportUtils";
 import type { DataTableColumn, DataTableProps, DataTableSort } from "./types";
 
 const defaultPageSizes = [10, 20, 50] as const;
@@ -57,12 +59,92 @@ function Pagination({ pagination, loading, onPageChange, onPageSizeChange }: Pic
   </nav>;
 }
 
-export function DataTable<TRecord>({ caption, columns, rows, rowKey, toolbar, loading = false, error, emptyMessage = "لا توجد سجلات مطابقة.", onRetry, retrying = false, sort, onSortChange, pagination, onPageChange, onPageSizeChange }: DataTableProps<TRecord>) {
+export function DataTable<TRecord>({
+  caption,
+  columns,
+  rows,
+  rowKey,
+  toolbar,
+  loading = false,
+  error,
+  emptyMessage = "لا توجد سجلات مطابقة.",
+  onRetry,
+  retrying = false,
+  sort,
+  onSortChange,
+  pagination,
+  onPageChange,
+  onPageSizeChange,
+  exportFilename,
+  onExport,
+}: DataTableProps<TRecord>) {
+  const { locale } = useI18n();
   const errorMessage = isApiError(error) ? error.userMessage : error instanceof Error ? error.message : "تعذر تحميل البيانات الآن.";
   const skeletonCount = Math.min(pagination?.pageSize ?? 5, 5);
 
+  const handleExport = () => {
+    if (onExport) {
+      onExport();
+      return;
+    }
+    if (!exportFilename) return;
+
+    const exportCols: CsvColumn<TRecord>[] = columns
+      .filter((col) => col.id !== "action" && col.exportable !== false)
+      .map((col) => ({
+        header: col.header,
+        accessor: (record: TRecord) => {
+          if (col.exportValue) return col.exportValue(record);
+          const raw = (record as Record<string, unknown>)[col.id];
+          if (typeof raw === "object" && raw !== null) {
+            if ("fullName" in raw) return (raw as { fullName: string }).fullName;
+            if ("name" in raw) return (raw as { name: string }).name;
+            if ("title" in raw) return (raw as { title: string }).title;
+          }
+          return raw as string | number | boolean | null | undefined;
+        },
+      }));
+
+    exportToCsv(exportFilename, rows, exportCols);
+  };
+
+  const exportLabel = locale === "ar" ? "تصدير CSV" : "Export CSV";
+
   return <div className="data-table-container" aria-busy={loading}>
-    {toolbar}
+    {toolbar ? (
+      exportFilename ? (
+        <div className="data-table-toolbar-wrap">
+          {toolbar}
+          <div className="data-table-export-action">
+            <button
+              type="button"
+              className="button secondary export-button"
+              disabled={loading || rows.length === 0}
+              onClick={handleExport}
+              title={exportLabel}
+              aria-label={exportLabel}
+            >
+              <Download aria-hidden="true" size={14} />
+              <span>{exportLabel}</span>
+            </button>
+          </div>
+        </div>
+      ) : toolbar
+    ) : exportFilename ? (
+      <div className="data-table-export-bar">
+        <button
+          type="button"
+          className="button secondary export-button"
+          disabled={loading || rows.length === 0}
+          onClick={handleExport}
+          title={exportLabel}
+          aria-label={exportLabel}
+        >
+          <Download aria-hidden="true" size={14} />
+          <span>{exportLabel}</span>
+        </button>
+      </div>
+    ) : null}
     {error ? <div className="data-table-state" role="alert"><strong>تعذر عرض السجلات</strong><p>{errorMessage}</p>{onRetry && <button className="button secondary" type="button" disabled={retrying} onClick={onRetry}><RefreshCw className={retrying ? "auth-spinner" : undefined} aria-hidden="true" size={16} />{retrying ? "جارٍ إعادة المحاولة..." : "إعادة المحاولة"}</button>}</div> : <>
       <div className="table-wrap">
         <table className="data-table">

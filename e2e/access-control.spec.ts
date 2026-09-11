@@ -22,7 +22,7 @@ test("enforces a limited administrator permission set in navigation, actions, an
   await expect(page.getByRole("heading", { name: "إدارة المستخدمين" })).toBeVisible();
   await expect(page.getByRole("link", { name: "إدارة المستخدمين" })).toBeVisible();
   await expect(page.getByRole("link", { name: "مراجعة الإعلانات" })).toHaveCount(0);
-  await page.getByRole("button", { name: "عرض المستخدم" }).first().click();
+  await page.getByRole("button", { name: /^عرض بيانات / }).first().click();
   await expect(page.getByRole("button", { name: /حظر المستخدم|إلغاء الحظر/ })).toBeDisabled();
 
   await page.goto("/categories");

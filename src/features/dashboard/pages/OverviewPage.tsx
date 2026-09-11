@@ -7,6 +7,8 @@ import { PageHeader } from "../../../components/ui/PageHeader";
 import { canAccessWithPermissions } from "../../../providers/accessControlProvider";
 import type { DashboardMetrics, Permission } from "../../../types/domain";
 import { useDashboardMetrics } from "../api/useDashboardMetrics";
+import { GrowthAreaChart } from "../components/GrowthAreaChart";
+import { RevenueBarChart } from "../components/RevenueBarChart";
 
 const numberFormatter = new Intl.NumberFormat("ar-SA");
 const currencyFormatter = new Intl.NumberFormat("ar-SA", {
@@ -165,6 +167,11 @@ function DashboardContent({ metrics, refreshError }: { metrics: DashboardMetrics
           </article>
         ))}
       </section>
+
+      <div className="overview-grid">
+        <GrowthAreaChart />
+        <RevenueBarChart />
+      </div>
 
       <div className="overview-grid">
         <section className="card panel" aria-labelledby="commission-summary-title">

@@ -12,6 +12,7 @@ import { canAccessWithPermissions } from "../../../providers/accessControlProvid
 import { useAdminNotification } from "../../../providers/notificationStore";
 import { ApiError } from "../../../services/http";
 import type { AdminAuditRecord, Permission } from "../../../types/domain";
+import { ExportButton, type CsvColumn } from "../../../utils/exportUtils";
 import { useSystemOperations, type SettingRecord } from "../api/useSystemOperations";
 import {
   broadcastSchema,
@@ -74,6 +75,16 @@ const auditColumns: DataTableColumn<AdminAuditRecord>[] = [
   },
   { id: "ip", header: "عنوان IP", cell: (log) => <bdi dir="ltr">{log.ipAddress}</bdi> },
   { id: "at", header: "الوقت", cell: (log) => formatDate(log.createdAt) },
+];
+
+const auditExportColumns: CsvColumn<AdminAuditRecord>[] = [
+  { header: "الرقم", accessor: (log) => log.id },
+  { header: "المشرف", accessor: (log) => log.admin?.name || log.adminId },
+  { header: "الإجراء", accessor: (log) => log.action },
+  { header: "نوع الكيان", accessor: (log) => `${log.entityType}${log.entityId === null ? "" : ` #${log.entityId}`}` },
+  { header: "عنوان IP", accessor: (log) => log.ipAddress },
+  { header: "التفاصيل", accessor: (log) => formatMetadata(log.metadata) ?? "" },
+  { header: "الوقت", accessor: (log) => log.createdAt },
 ];
 
 export function SystemPage() {
@@ -365,7 +376,33 @@ export function SystemPage() {
             pagination={{ page: table.page, pageSize: table.pageSize, total: api.audit.result.total ?? 0, pageSizeOptions: table.pageSizeOptions }}
             onPageChange={table.setPage}
             onPageSizeChange={table.setPageSize}
-            toolbar={<div className="table-toolbar system-audit-toolbar"><div><h2>سجل العمليات الإدارية</h2><p className="panel-copy">محول قراءة محلي فقط حتى يؤكد الخادم مسار القائمة.</p></div><label className="field-with-icon"><History aria-hidden="true" size={16} /><input value={table.search} onChange={(event) => table.setSearch(event.target.value)} aria-label="البحث في سجل التدقيق" placeholder="الإجراء أو الكيان أو المشرف" /></label><span className="read-only"><LockKeyhole aria-hidden="true" size={15} />Append-only</span></div>}
+            toolbar={
+              <div className="table-toolbar system-audit-toolbar">
+                <div>
+                  <h2>سجل العمليات الإدارية</h2>
+                  <p className="panel-copy">محول قراءة محلي فقط حتى يؤكد الخادم مسار القائمة.</p>
+                </div>
+                <label className="field-with-icon">
+                  <History aria-hidden="true" size={16} />
+                  <input
+                    value={table.search}
+                    onChange={(event) => table.setSearch(event.target.value)}
+                    aria-label="البحث في سجل التدقيق"
+                    placeholder="الإجراء أو الكيان أو المشرف"
+                  />
+                </label>
+                <div className="table-actions-group">
+                  <span className="read-only">
+                    <LockKeyhole aria-hidden="true" size={15} />Append-only
+                  </span>
+                  <ExportButton
+                    filename="tihamah-audit-logs"
+                    data={api.audit.result.data ?? []}
+                    columns={auditExportColumns}
+                  />
+                </div>
+              </div>
+            }
           />
         </section>
       )}

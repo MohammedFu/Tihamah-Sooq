@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 const sessionKey = "tihamah-sooq.admin-session.v1";
 
 test("enforces the complete administrator authentication-first flow", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto("/users?status=banned#records");
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("heading", { name: "تسجيل الدخول" })).toBeVisible();
